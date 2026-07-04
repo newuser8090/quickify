@@ -20,5 +20,16 @@
   "workspaces": [
     "apps/*",
     "packages/*"
-  ]
+  ],
+  "dependencies": {
+    "@hookform/resolvers": "^5.4.0",
+    "@supabase/supabase-js": "^2.110.0",
+    "@tailwindcss/postcss": "^4.3.2",
+    "lucide-react": "^1.23.0",
+    "postcss": "^8.5.16",
+    "react-hook-form": "^7.80.0",
+    "tailwindcss": "^4.3.2",
+    "zod": "^4.4.3",
+    "zustand": "^5.0.14"
+  }
 }
