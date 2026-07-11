@@ -203,7 +203,7 @@ export default function SearchBar() {
   alt={product.name}
   width={64}
   height={64}
-  className="..."
+  className="h-full w-full object-cover"
 />
                         ) : (
                           <div className="flex h-full w-full items-center justify-center text-2xl">

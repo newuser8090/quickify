@@ -4,20 +4,17 @@ import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { supabase } from "@/lib/supabase";
-import { useNotificationStore } from "@/store/notificationStore";
+
 
 export default function useRealtimeOrders(userId?: string) {
   const queryClient = useQueryClient();
 
-  const addNotification = useNotificationStore(
-    (state) => state.addNotification
-  );
 
   useEffect(() => {
     if (!userId) return;
 
     const channel = supabase
-      .channel("orders-realtime")
+      .channel(`orders-realtime-${userId}`)
       .on(
         "postgres_changes",
         {
@@ -36,16 +33,25 @@ export default function useRealtimeOrders(userId?: string) {
             queryKey: ["orders", userId],
           });
 
+          if (newOrder.id) {
+            queryClient.invalidateQueries({
+              queryKey: ["order", newOrder.id],
+            });
+
+            queryClient.invalidateQueries({
+              queryKey: ["admin-order", newOrder.id],
+            });
+          }
+
+          queryClient.invalidateQueries({
+            queryKey: ["admin-orders"],
+          });
+
           queryClient.invalidateQueries({
             queryKey: ["admin-dashboard-stats"],
           });
 
           if (newOrder.status) {
-            addNotification({
-              type: "order",
-              title: "Order Updated",
-              message: `Order #${newOrder.id} is now ${newOrder.status}.`,
-            });
           }
         }
       )
@@ -54,5 +60,5 @@ export default function useRealtimeOrders(userId?: string) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId, queryClient, addNotification]);
+  }, [userId, queryClient]);
 }

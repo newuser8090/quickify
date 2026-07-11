@@ -7,10 +7,12 @@ import { toast } from "sonner";
 import {
   ArrowLeft,
   BadgeCheck,
+  Bell,
   Clock3,
   Heart,
   Minus,
   Plus,
+  Share2,
   ShieldCheck,
   ShoppingCart,
   Star,
@@ -28,8 +30,9 @@ import ProductGallery from "@/components/product/ProductGallery";
 import CartDrawer from "@/components/cart/CartDrawer";
 import CartButton from "@/components/layout/CartButton";
 
-
 import { getProduct } from "@/services/productService";
+import { subscribeStockNotification } from "@/services/stockNotificationService";
+import { useAuthStore } from "@/store/authStore";
 import { useCartStore } from "@/store/cartStore";
 import { useRecentStore } from "@/store/recentStore";
 import { useWishlistStore } from "@/store/wishlistStore";
@@ -53,6 +56,8 @@ export default function ProductPage({ params }: Props) {
   const addItem = useCartStore((state) => state.addItem);
   const increaseQuantity = useCartStore((state) => state.increaseQuantity);
   const decreaseQuantity = useCartStore((state) => state.decreaseQuantity);
+
+  const user = useAuthStore((state) => state.user);
 
   const toggleWishlist = useWishlistStore((state) => state.toggle);
   const isWishlisted = useWishlistStore((state) =>
@@ -96,27 +101,85 @@ export default function ProductPage({ params }: Props) {
   const currentUnit = selectedVariant?.unit ?? product.unit;
 
   const cartKey = `${product.id}-${selectedVariant?.id ?? "base"}`;
-
-const cartItem = items.find(
-  (item) => item.cartKey === cartKey
-);
+  const cartItem = items.find((item) => item.cartKey === cartKey);
   const inStock = currentStock > 0;
+
+  async function handleShareProduct() {
+  if (!product) return;
+
+  const productUrl = window.location.href;
+
+  if (navigator.share) {
+    await navigator.share({
+      title: product.name,
+      text: `Check out ${product.name} on Quickify`,
+      url: productUrl,
+    });
+    return;
+  }
+
+  await navigator.clipboard.writeText(productUrl);
+  toast.success("Product link copied to clipboard");
+}
+
+  async function handleNotifyMe() {
+  if (!product) return;
+
+  if (!user) {
+    toast.error("Please login to get stock alerts");
+    return;
+  }
+
+  try {
+    await subscribeStockNotification(user.id, product.id);
+    toast.success("We'll notify you when this product is back in stock");
+  } catch {
+    toast.error("Failed to subscribe for stock alert");
+  }
+}
+  function handleAddToCart() {
+    if (!product) return;
+    addItem(
+      {
+        ...product,
+        price: currentPrice,
+        mrp: currentMrp,
+        stock: currentStock,
+        unit: currentUnit,
+      },
+      selectedVariant
+        ? {
+            id: selectedVariant.id,
+            name: selectedVariant.name,
+            unit: selectedVariant.unit,
+            price: selectedVariant.price,
+            mrp: selectedVariant.mrp,
+            stock: selectedVariant.stock,
+          }
+        : null
+    );
+
+    toast.success(
+      `${product.name}${
+        selectedVariant ? ` (${selectedVariant.unit})` : ""
+      } added to cart`
+    );
+  }
 
   return (
     <main className="min-h-screen bg-gray-50">
       <div className="mx-auto max-w-7xl p-6">
         <div className="mb-6 flex items-center justify-between">
-  <Link
-    href="/"
-    className="inline-flex items-center gap-2 font-semibold text-green-700 hover:underline"
-  >
-    <ArrowLeft size={18} />
-    Back to shopping
-  </Link>
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 font-semibold text-green-700 hover:underline"
+          >
+            <ArrowLeft size={18} />
+            Back to shopping
+          </Link>
 
-  <CartButton />
-</div>
-        
+          <CartButton />
+        </div>
 
         <div className="grid gap-8 rounded-3xl bg-white p-6 shadow-sm lg:grid-cols-2 lg:p-8">
           <ProductGallery product={product} />
@@ -144,31 +207,44 @@ const cartItem = items.find(
               </span>
             </div>
 
-            <div className="mt-6 flex items-start justify-between gap-4">
-              <h1 className="text-4xl font-extrabold leading-tight md:text-5xl">
-                {product.name}
-              </h1>
+            <div className="mt-6 flex items-start justify-between gap-5">
+              <div className="flex-1">
+                <h1 className="text-4xl font-extrabold leading-tight md:text-5xl">
+                  {product.name}
+                </h1>
+              </div>
 
-              <button
-                onClick={() => {
-                  toggleWishlist(product);
-                  toast.success(
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={() => {
+                    toggleWishlist(product);
+                    toast.success(
+                      isWishlisted
+                        ? `${product.name} removed from wishlist`
+                        : `${product.name} added to wishlist`
+                    );
+                  }}
+                  className={`flex h-12 w-12 items-center justify-center rounded-full border transition-all ${
                     isWishlisted
-                      ? `${product.name} removed from wishlist`
-                      : `${product.name} added to wishlist`
-                  );
-                }}
-                className={`flex h-14 w-14 items-center justify-center rounded-full border transition-all ${
-                  isWishlisted
-                    ? "border-red-200 bg-red-50 text-red-500"
-                    : "border-gray-200 bg-white text-gray-500 hover:border-red-300 hover:text-red-500"
-                }`}
-              >
-                <Heart
-                  size={24}
-                  className={isWishlisted ? "fill-red-500" : ""}
-                />
-              </button>
+                      ? "border-red-200 bg-red-50 text-red-500"
+                      : "border-gray-200 bg-white text-gray-500 hover:border-red-300 hover:text-red-500"
+                  }`}
+                  title="Wishlist"
+                >
+                  <Heart
+                    size={22}
+                    className={isWishlisted ? "fill-red-500" : ""}
+                  />
+                </button>
+
+                <button
+                  onClick={handleShareProduct}
+                  className="flex h-12 w-12 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 transition-all hover:border-green-300 hover:text-green-600"
+                  title="Share product"
+                >
+                  <Share2 size={22} />
+                </button>
+              </div>
             </div>
 
             <div className="mt-5 flex flex-wrap items-center gap-3">
@@ -184,7 +260,9 @@ const cartItem = items.find(
 
             <div className="mt-7 rounded-3xl bg-gray-50 p-5">
               <div className="flex flex-wrap items-end gap-4">
-                <span className="text-5xl font-extrabold">₹{currentPrice}</span>
+                <span className="text-5xl font-extrabold">
+                  ₹{currentPrice}
+                </span>
 
                 <span className="pb-1 text-2xl text-gray-400 line-through">
                   ₹{currentMrp}
@@ -260,12 +338,14 @@ const cartItem = items.find(
               />
             </div>
 
-            <div className="mt-8 flex items-center gap-3 rounded-2xl bg-orange-50 p-4 text-orange-700">
-              <Clock3 />
-              <span className="font-semibold">
-                Order now and get it in {product.deliveryTime}
-              </span>
-            </div>
+            {inStock && (
+              <div className="mt-8 flex items-center gap-3 rounded-2xl bg-orange-50 p-4 text-orange-700">
+                <Clock3 />
+                <span className="font-semibold">
+                  Order now and get it in {product.deliveryTime}
+                </span>
+              </div>
+            )}
 
             {cartItem ? (
               <div className="mt-8 flex w-full items-center justify-between rounded-2xl border border-green-600 bg-green-50 px-6 py-5">
@@ -287,51 +367,32 @@ const cartItem = items.find(
                   onClick={() => {
                     const success = increaseQuantity(cartItem.cartKey);
 
-if (success) {
-  toast.success(`${product.name} quantity increased`);
-} else {
-  toast.error("Maximum available stock reached");
-}
+                    if (success) {
+                      toast.success(`${product.name} quantity increased`);
+                    } else {
+                      toast.error("Maximum available stock reached");
+                    }
                   }}
                   className="rounded-xl bg-green-600 p-3 text-white hover:bg-green-700"
                 >
                   <Plus size={22} />
                 </button>
               </div>
-            ) : (
+            ) : inStock ? (
               <button
-                disabled={!inStock}
-                onClick={() => {
-  addItem(
-    {
-      ...product,
-      price: currentPrice,
-      mrp: currentMrp,
-      stock: currentStock,
-      unit: currentUnit,
-    },
-    selectedVariant
-      ? {
-          id: selectedVariant.id,
-          name: selectedVariant.name,
-          unit: selectedVariant.unit,
-          price: selectedVariant.price,
-          mrp: selectedVariant.mrp,
-          stock: selectedVariant.stock,
-        }
-      : null
-  );
-
-  toast.success(
-    `${product.name}${
-      selectedVariant ? ` (${selectedVariant.unit})` : ""
-    } added to cart`
-  );
-}}
-                className="mt-8 flex w-full items-center justify-center gap-3 rounded-2xl bg-green-600 py-5 text-lg font-bold text-white shadow-sm hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+                onClick={handleAddToCart}
+                className="mt-8 flex w-full items-center justify-center gap-3 rounded-2xl bg-green-600 py-5 text-lg font-bold text-white shadow-sm hover:bg-green-700"
               >
                 <ShoppingCart />
-                {inStock ? "Add To Cart" : "Out of Stock"}
+                Add To Cart
+              </button>
+            ) : (
+              <button
+                onClick={handleNotifyMe}
+                className="mt-8 flex w-full items-center justify-center gap-3 rounded-2xl border border-green-600 bg-white py-5 text-lg font-bold text-green-700 shadow-sm hover:bg-green-50"
+              >
+                <Bell />
+                Notify Me When Available
               </button>
             )}
           </div>
@@ -344,7 +405,7 @@ if (success) {
       </div>
 
       <ProductQuickView />
-<CartDrawer />
+      <CartDrawer />
     </main>
   );
 }

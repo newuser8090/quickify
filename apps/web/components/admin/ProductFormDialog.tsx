@@ -2,12 +2,14 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { ImagePlus, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Product } from "@/types/product";
 import { ProductFormValues } from "@/services/adminProductService";
 import { uploadProductImage } from "@/services/storageService";
+import { getCategories } from "@/services/categoryService";
 import ProductImagesManager from "./ProductImagesManager";
 import ProductVariantsManager from "./ProductVariantsManager";
 
@@ -56,6 +58,14 @@ export default function ProductFormDialog({
   const [form, setForm] = useState<ProductFormValues>(emptyForm);
   const [uploading, setUploading] = useState(false);
 
+  const { data: categories = [] } = useQuery({
+    queryKey: ["admin-categories"],
+    queryFn: getCategories,
+    enabled: open,
+  });
+
+  const activeCategories = categories.filter((category) => category.is_active);
+
   useEffect(() => {
     setForm(initialData ? { ...emptyForm, ...initialData } : emptyForm);
   }, [initialData, open]);
@@ -87,6 +97,12 @@ export default function ProductFormDialog({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    if (!form.category) {
+      toast.error("Please select a category");
+      return;
+    }
+
     onSubmit(form);
   }
 
@@ -129,10 +145,10 @@ export default function ProductFormDialog({
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
-            <Input
-              label="Category"
+            <CategorySelect
               value={form.category}
-              onChange={(v) => updateField("category", v)}
+              categories={activeCategories}
+              onChange={(value) => updateField("category", value)}
             />
 
             <Input
@@ -287,6 +303,44 @@ export default function ProductFormDialog({
         )}
       </div>
     </>
+  );
+}
+
+function CategorySelect({
+  value,
+  categories,
+  onChange,
+}: {
+  value: string;
+  categories: { id: number; name: string; emoji?: string | null; image?: string | null }[];
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-2 block font-semibold">Category</span>
+
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        required
+        className="w-full rounded-xl border p-3 outline-none focus:border-green-600"
+      >
+        <option value="">Select category</option>
+
+        {categories.map((category) => (
+          <option key={category.id} value={category.name}>
+            {category.emoji ? `${category.emoji} ` : ""}
+            {category.name}
+          </option>
+        ))}
+      </select>
+
+      {categories.length === 0 && (
+        <p className="mt-2 text-sm text-red-500">
+          No active categories found. Create one from Admin → Categories.
+        </p>
+      )}
+    </label>
   );
 }
 

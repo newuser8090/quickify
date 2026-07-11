@@ -37,3 +37,43 @@ export async function verifyRazorpayPayment(data: {
 
   return result;
 }
+export type RazorpayRefundResult = {
+  success: boolean;
+  refund: {
+    id: string;
+    payment_id: string;
+    amount: number;
+    status: string;
+    speed_processed?: string | null;
+    created_at?: number;
+  };
+};
+
+export async function createRazorpayRefund(input: {
+  paymentId: string;
+  orderId: number;
+  amount: number;
+  note?: string;
+}): Promise<RazorpayRefundResult> {
+  const response = await fetch(
+    "/api/razorpay/refund",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    }
+  );
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      result.error ||
+        "Razorpay refund could not be initiated."
+    );
+  }
+
+  return result as RazorpayRefundResult;
+}

@@ -1,13 +1,24 @@
 import { supabase } from "@/lib/supabase";
 
-export async function isAdmin(userId: string) {
+export async function isAdmin(
+  userId: string
+): Promise<boolean> {
   const { data, error } = await supabase
-    .from("admins")
-    .select("user_id")
-    .eq("user_id", userId)
-    .single();
+    .from("users")
+    .select("role")
+    .eq("id", userId)
+    .maybeSingle();
 
-  if (error) return false;
+  if (error) {
+    console.error(
+      "Admin role check failed:",
+      error
+    );
+    return false;
+  }
 
-  return !!data;
+  return (
+    data?.role === "admin" ||
+    data?.role === "creator"
+  );
 }

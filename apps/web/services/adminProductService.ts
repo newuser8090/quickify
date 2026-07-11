@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { adjustProductStock } from "@/services/inventoryService";
 import { Product } from "@/types/product";
+import { notifyUsersForRestockedProduct } from "@/services/stockNotificationAdminService";
 
 export type ProductFormValues = Omit<Product, "id">;
 
@@ -16,7 +17,7 @@ export async function createProduct(values: ProductFormValues) {
     discount: values.discount,
     rating: values.rating,
     reviews: values.reviews,
-    // stock: values.stock,
+    stock: values.stock,
     unit: values.unit,
     delivery_time: values.deliveryTime,
     featured: values.featured,
@@ -77,6 +78,9 @@ export async function updateProduct(id: number, values: ProductFormValues) {
       note: "Stock changed from product edit page",
     });
   }
+  if (previousStock <= 0 && newStock > 0) {
+  await notifyUsersForRestockedProduct(id, values.name);
+}
 }
 
 export async function deleteProduct(id: number) {

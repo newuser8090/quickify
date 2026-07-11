@@ -12,12 +12,15 @@ import {
   ShoppingCart,
   Star,
   Truck,
+  Bell,
 } from "lucide-react";
 
 import { Product } from "@/types/product";
 import { useCartStore } from "@/store/cartStore";
 import { useWishlistStore } from "@/store/wishlistStore";
 import { useQuickViewStore } from "@/store/quickViewStore";
+import { useAuthStore } from "@/store/authStore";
+import { subscribeStockNotification } from "@/services/stockNotificationService";
 
 type Props = {
   product: Product;
@@ -33,11 +36,25 @@ export default function ProductCard({ product }: Props) {
   const liked = useWishlistStore((state) => state.isWishlisted(product.id));
 
   const openQuickView = useQuickViewStore((state) => state.open);
+  const user = useAuthStore((state) => state.user);
 
   const cartKey = `${product.id}-base`;
   const cartItem = items.find((item) => item.cartKey === cartKey);
 
   const inStock = product.stock > 0;
+  async function handleNotifyMe() {
+  if (!user) {
+    toast.error("Please login to get stock alerts");
+    return;
+  }
+
+  try {
+    await subscribeStockNotification(user.id, product.id);
+    toast.success("We'll notify you when this product is back in stock");
+  } catch {
+    toast.error("Failed to subscribe for stock alert");
+  }
+}
 
   return (
     <motion.div
@@ -178,18 +195,28 @@ export default function ProductCard({ product }: Props) {
             </button>
           </div>
         ) : (
-          <motion.button
-            whileTap={{ scale: 0.96 }}
-            disabled={!inStock}
-            onClick={() => {
-              addItem(product, null);
-              toast.success(`${product.name} added to cart`);
-            }}
-            className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 py-3 font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-gray-300"
-          >
-            <ShoppingCart size={18} />
-            {inStock ? "Add to Cart" : "Out of Stock"}
-          </motion.button>
+          inStock ? (
+  <motion.button
+    whileTap={{ scale: 0.96 }}
+    onClick={() => {
+      addItem(product, null);
+      toast.success(`${product.name} added to cart`);
+    }}
+    className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 py-3 font-semibold text-white transition hover:bg-green-700"
+  >
+    <ShoppingCart size={18} />
+    Add to Cart
+  </motion.button>
+) : (
+  <motion.button
+    whileTap={{ scale: 0.96 }}
+    onClick={handleNotifyMe}
+    className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-green-600 bg-white py-3 font-semibold text-green-700 transition hover:bg-green-50"
+  >
+    <Bell size={18} />
+    Notify Me
+  </motion.button>
+)
         )}
       </div>
     </motion.div>

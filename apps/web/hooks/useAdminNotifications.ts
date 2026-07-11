@@ -1,23 +1,25 @@
 "use client";
 
 import { useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { supabase } from "@/lib/supabase";
 import { getAdminNotifications } from "@/services/adminNotificationService";
 import { useAdminNotificationStore } from "@/store/adminNotificationStore";
-import type { AdminNotification } from "@/types/adminNotification";
 
 export function useAdminNotifications() {
-  const setNotifications =
-    useAdminNotificationStore((state) => state.setNotifications);
+  const queryClient = useQueryClient();
 
-  const addNotification =
-    useAdminNotificationStore((state) => state.addNotification);
+  const setNotifications = useAdminNotificationStore(
+    (state) => state.setNotifications
+  );
 
   const query = useQuery({
     queryKey: ["admin-notifications"],
     queryFn: getAdminNotifications,
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 
   useEffect(() => {
@@ -28,16 +30,18 @@ export function useAdminNotifications() {
 
   useEffect(() => {
     const channel = supabase
-      .channel("admin-notifications")
+      .channel("admin-notifications-realtime")
       .on(
         "postgres_changes",
         {
-          event: "INSERT",
+          event: "*",
           schema: "public",
           table: "admin_notifications",
         },
-        (payload) => {
-          addNotification(payload.new as AdminNotification);
+        async () => {
+          await queryClient.invalidateQueries({
+            queryKey: ["admin-notifications"],
+          });
         }
       )
       .subscribe();
@@ -45,7 +49,7 @@ export function useAdminNotifications() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [addNotification]);
+  }, [queryClient]);
 
   return query;
 }

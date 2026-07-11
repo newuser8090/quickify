@@ -4,7 +4,7 @@ export type Notification = {
   id: string;
   title: string;
   message: string;
-  type: "order" | "coupon" | "system";
+  type: "order" | "coupon" | "system" | "stock";
   read: boolean;
   createdAt: string;
 };

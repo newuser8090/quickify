@@ -1,14 +1,23 @@
 "use client";
 
 import Link from "next/link";
+import { ShoppingCart } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
+import { toast } from "sonner";
 
 import CartItem from "./CartItem";
 import useCart from "@/hooks/useCart";
+import EmptyState from "@/components/ui/EmptyState";
 import { useUIStore } from "@/store/uiStore";
+import { useCartStore } from "@/store/cartStore";
 
 export default function CartDrawer() {
   const { items, totalPrice } = useCart();
+
+  const savedItems = useCartStore((state) => state.savedItems);
+  const saveForLater = useCartStore((state) => state.saveForLater);
+  const moveToCart = useCartStore((state) => state.moveToCart);
+  const removeSavedItem = useCartStore((state) => state.removeSavedItem);
 
   const cartOpen = useUIStore((state) => state.cartOpen);
   const closeCart = useUIStore((state) => state.closeCart);
@@ -29,27 +38,108 @@ export default function CartDrawer() {
             initial={{ x: 450 }}
             animate={{ x: 0 }}
             exit={{ x: 450 }}
-            transition={{
-              type: "spring",
-              stiffness: 260,
-              damping: 28,
-            }}
+            transition={{ type: "spring", stiffness: 260, damping: 28 }}
             className="fixed right-0 top-0 z-50 flex h-screen w-[420px] flex-col bg-white shadow-xl"
           >
             <div className="border-b p-5">
               <h2 className="text-2xl font-bold">My Cart</h2>
             </div>
 
-            <div className="flex-1 space-y-4 overflow-y-auto p-5">
-              {items.length === 0 && (
-                <p className="text-center text-gray-500">
-                  Your cart is empty.
-                </p>
+            <div className="flex-1 space-y-5 overflow-y-auto p-5">
+              {items.length === 0 && savedItems.length === 0 && (
+                <div>
+  <EmptyState
+    icon={<ShoppingCart size={42} />}
+    title="Your cart is empty"
+    description="Add fresh groceries and daily essentials to your cart."
+  />
+
+  <Link
+    href="/"
+    onClick={closeCart}
+    className="mx-auto mt-4 block w-fit rounded-2xl bg-green-600 px-7 py-3 font-bold text-white shadow-sm transition hover:bg-green-700"
+  >
+    Start Shopping
+  </Link>
+</div>
               )}
 
-              {items.map((item) => (
-                <CartItem key={item.id} item={item} />
-              ))}
+              {items.length > 0 && (
+                <div className="space-y-4">
+                  {items.map((item) => (
+                    <div key={item.cartKey} className="rounded-2xl border p-3">
+                      <CartItem item={item} />
+
+                      <button
+                        onClick={() => {
+                          saveForLater(item.cartKey);
+                          toast.success("Saved for later");
+                        }}
+                        className="mt-3 w-full rounded-xl border px-4 py-2 text-sm font-semibold text-green-700 hover:bg-green-50"
+                      >
+                        Save for Later
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {savedItems.length > 0 && (
+                <div className="border-t pt-5">
+                  <h3 className="mb-3 text-lg font-bold">Saved for Later</h3>
+
+                  <div className="space-y-4">
+                    {savedItems.map((item) => (
+                      <div
+                        key={item.cartKey}
+                        className="rounded-2xl border bg-gray-50 p-4"
+                      >
+                        <div className="flex justify-between gap-3">
+                          <div>
+                            <p className="font-bold">{item.name}</p>
+
+                            {item.variantName && (
+                              <p className="text-sm font-medium text-green-700">
+                                {item.variantName}
+                              </p>
+                            )}
+
+                            <p className="mt-1 text-sm text-gray-500">
+                              {item.unit} • ₹{item.price}
+                            </p>
+                          </div>
+
+                          <p className="font-bold">Qty {item.quantity}</p>
+                        </div>
+
+                        <div className="mt-4 grid grid-cols-2 gap-3">
+                          <button
+                            onClick={() => {
+                              const success = moveToCart(item.cartKey);
+                              toast[success ? "success" : "error"](
+                                success ? "Moved to cart" : "Item is out of stock"
+                              );
+                            }}
+                            className="rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700"
+                          >
+                            Move to Cart
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              removeSavedItem(item.cartKey);
+                              toast.success("Removed from saved items");
+                            }}
+                            className="rounded-xl border px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="border-t p-5">

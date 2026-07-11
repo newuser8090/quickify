@@ -6,10 +6,8 @@ import { useQuery } from "@tanstack/react-query";
 import Navbar from "@/components/layout/Navbar";
 import Hero from "@/components/home/Hero";
 import CategoryTabs from "@/components/home/CategoryTabs";
-import FlashSale from "@/components/home/FlashSale";
-import FeaturedProducts from "@/components/home/FeaturedProducts";
-import BestSellerProducts from "@/components/home/BestSellerProducts";
 import RecentlyViewed from "@/components/home/RecentlyViewed";
+import RecentlyPurchased from "@/components/home/RecentlyPurchased";
 import ProductFilters from "@/components/home/ProductFilters";
 import ProductGrid from "@/components/product/ProductGrid";
 import ProductQuickView from "@/components/product/ProductQuickView";
@@ -20,9 +18,16 @@ import BannerCarousel from "@/components/home/BannerCarousel";
 import { getProducts } from "@/lib/products";
 import { mapProduct } from "@/utils/mapProduct";
 import { useFilterStore } from "@/store/filterStore";
+import { useAuthStore } from "@/store/authStore";
 import { Product } from "@/types/product";
+import {
+  getActiveHomepageSections,
+  HomepageSection,
+} from "@/services/homepageSectionService";
 
 export default function Home() {
+  const user = useAuthStore((state) => state.user);
+
   const { data: products = [], isLoading: loading } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
@@ -31,12 +36,32 @@ export default function Home() {
     },
   });
 
+  const { data: homepageSections = [] } = useQuery({
+    queryKey: ["active-homepage-sections"],
+    queryFn: getActiveHomepageSections,
+  });
+
   const search = useFilterStore((state) => state.search);
   const category = useFilterStore((state) => state.category);
   const sort = useFilterStore((state) => state.sort);
   const inStockOnly = useFilterStore((state) => state.inStockOnly);
   const discountedOnly = useFilterStore((state) => state.discountedOnly);
   const minRating = useFilterStore((state) => state.minRating);
+  const setCategory = useFilterStore((state) => state.setCategory);
+
+  function scrollToProducts() {
+    document
+      .getElementById("products-section")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function handleBannerClick(selectedCategory: string) {
+    setCategory(selectedCategory);
+
+    setTimeout(() => {
+      scrollToProducts();
+    }, 100);
+  }
 
   const filteredProducts = useMemo(() => {
     let result = products.filter((product) => {
@@ -89,102 +114,169 @@ export default function Home() {
 
   const isCategorySelected = category !== "All";
 
-  const hasActiveFilters =
+  const hasAdvancedFilters =
     search ||
-    isCategorySelected ||
     sort !== "default" ||
     inStockOnly ||
     discountedOnly ||
     minRating > 0;
 
-  const newArrivals = useMemo(() => {
-    return [...products].sort((a, b) => b.id - a.id).slice(0, 8);
-  }, [products]);
+  const userName =
+  user?.user_metadata?.full_name?.trim().split(" ")[0] || "there";
 
-  const topRated = useMemo(() => {
-    return [...products]
-      .filter((product) => product.rating >= 4)
-      .sort((a, b) => b.rating - a.rating)
-      .slice(0, 8);
-  }, [products]);
+  const currentHour = new Date().getHours();
 
-  const biggestDiscounts = useMemo(() => {
-    return [...products]
-      .filter((product) => product.discount > 0)
-      .sort((a, b) => b.discount - a.discount)
-      .slice(0, 8);
-  }, [products]);
-
-  const normalProducts = products.filter(
-    (product) => !product.featured && !product.bestseller
-  );
+const greeting =
+  currentHour < 12
+    ? "Good morning"
+    : currentHour < 18
+      ? "Good afternoon"
+      : "Good evening";
 
   return (
     <main className="min-h-screen bg-gray-50">
       <Navbar />
 
-      {!hasActiveFilters && <Hero />}
-      {!hasActiveFilters && <BannerCarousel />}
+      {!hasAdvancedFilters && !isCategorySelected && (
+        <section className="mx-auto max-w-7xl px-6 pt-6">
+          <div className="rounded-3xl bg-white p-6 shadow-sm">
+            <h1 className="text-3xl font-extrabold">
+              {greeting}, {userName} 👋
+            </h1>
+
+            <p className="mt-2 text-gray-500">
+              Fresh groceries, quick delivery, and smart picks just for you.
+            </p>
+          </div>
+        </section>
+      )}
+
+      {!hasAdvancedFilters && <Hero onStartShopping={scrollToProducts} />}
+
+      {!hasAdvancedFilters && (
+        <BannerCarousel onBannerClick={handleBannerClick} />
+      )}
 
       <CategoryTabs />
       <ProductFilters />
 
-      {hasActiveFilters ? (
-        <section className="mt-12">
-          <SectionHeader
-            title={isCategorySelected ? `${category} Products` : "Search Results"}
-            subtitle={`${filteredProducts.length} products found`}
-          />
+      <div id="products-section">
+        {hasAdvancedFilters || isCategorySelected ? (
+          <>
+            <section className="mt-12">
+              <SectionHeader
+                title={
+                  isCategorySelected ? `${category} Products` : "Search Results"
+                }
+                subtitle={`${filteredProducts.length} products found`}
+              />
 
-          <ProductGrid products={filteredProducts} isLoading={loading} />
-        </section>
-      ) : (
-        <>
-          <FlashSale />
+              <ProductGrid products={filteredProducts} isLoading={loading} />
+            </section>
 
-          <FeaturedProducts />
-
-          <BestSellerProducts />
-
-          <HomeProductSection
-            title="🆕 New Arrivals"
-            subtitle="Freshly added products in Quickify."
-            products={newArrivals}
+            {isCategorySelected && !hasAdvancedFilters && (
+              <DynamicHomepageSections
+                sections={homepageSections}
+                products={products}
+                loading={loading}
+                excludeAllProducts
+              />
+            )}
+          </>
+        ) : (
+          <DynamicHomepageSections
+            sections={homepageSections}
+            products={products}
             loading={loading}
           />
-
-          <HomeProductSection
-            title="⭐ Top Rated"
-            subtitle="Products customers love the most."
-            products={topRated}
-            loading={loading}
-          />
-
-          <HomeProductSection
-            title="💸 Biggest Discounts"
-            subtitle="Best deals and highest savings today."
-            products={biggestDiscounts}
-            loading={loading}
-          />
-
-          <RecentlyViewed />
-
-          <section className="mt-12">
-            <SectionHeader
-              title="All Products"
-              subtitle="Browse all available products."
-            />
-
-            <ProductGrid products={normalProducts} isLoading={loading} />
-          </section>
-        </>
-      )}
+        )}
+      </div>
 
       <ProductQuickView />
       <CartDrawer />
       <Footer />
     </main>
   );
+}
+
+function DynamicHomepageSections({
+  sections,
+  products,
+  loading,
+  excludeAllProducts = false,
+}: {
+  sections: HomepageSection[];
+  products: Product[];
+  loading: boolean;
+  excludeAllProducts?: boolean;
+}) {
+  return (
+    <>
+      {sections
+        .filter((section) =>
+          excludeAllProducts ? section.section_type !== "all" : true
+        )
+        .map((section) => {
+          if (section.section_type === "recently_viewed") {
+            return <RecentlyViewed key={section.id} />;
+          }
+
+          if (section.section_type === "recently_purchased") {
+            return <RecentlyPurchased key={section.id} />;
+          }
+
+          const sectionProducts = getSectionProducts(section, products);
+
+          return (
+            <HomeProductSection
+              key={section.id}
+              title={section.title}
+              subtitle={section.subtitle ?? ""}
+              products={sectionProducts}
+              loading={loading}
+            />
+          );
+        })}
+    </>
+  );
+}
+
+function getSectionProducts(section: HomepageSection, products: Product[]) {
+  let result: Product[] = [];
+
+  if (section.section_type === "all") {
+    result = products;
+  }
+
+  if (section.section_type === "featured") {
+    result = products.filter((product) => product.featured);
+  }
+
+  if (section.section_type === "bestseller") {
+    result = products.filter((product) => product.bestseller);
+  }
+
+  if (section.section_type === "discounted") {
+    result = products
+      .filter((product) => product.discount > 0)
+      .sort((a, b) => b.discount - a.discount);
+  }
+
+  if (section.section_type === "new") {
+    result = [...products].sort((a, b) => b.id - a.id);
+  }
+
+  if (section.section_type === "top_rated") {
+    result = [...products]
+      .filter((product) => product.rating >= 4)
+      .sort((a, b) => b.rating - a.rating);
+  }
+
+  if (section.section_type === "category" && section.category) {
+    result = products.filter((product) => product.category === section.category);
+  }
+
+  return result.slice(0, section.limit_count);
 }
 
 function HomeProductSection({

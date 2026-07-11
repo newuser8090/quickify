@@ -4,6 +4,8 @@ import {
   notifyPaymentSuccess,
 } from "@/services/adminNotifyService";
 import { CartItem } from "@/store/cartStore";
+import { createUserNotification } from "@/services/notificationService";
+
 
 type CreateOrderInput = {
   userId: string;
@@ -19,6 +21,7 @@ type CreateOrderInput = {
   razorpayOrderId?: string;
   razorpayPaymentId?: string;
   razorpaySignature?: string;
+  deliverySlot?: string;
 };
 
 export async function createOrder({
@@ -35,6 +38,7 @@ export async function createOrder({
   razorpayOrderId,
   razorpayPaymentId,
   razorpaySignature,
+  deliverySlot,
 }: CreateOrderInput) {
   const { data: order, error: orderError } = await supabase
     .from("orders")
@@ -51,6 +55,7 @@ export async function createOrder({
       razorpay_order_id: razorpayOrderId ?? null,
       razorpay_payment_id: razorpayPaymentId ?? null,
       razorpay_signature: razorpaySignature ?? null,
+      delivery_slot: deliverySlot ?? null,
       status: "Placed",
     })
     .select("id")
@@ -77,9 +82,27 @@ export async function createOrder({
 
   const { error: itemsError } = await supabase
     .from("order_items")
+    
     .insert(orderItems);
+    
 
   if (itemsError) throw itemsError;
+  await createUserNotification({
+  userId,
+  type: "order",
+  title: "Order Placed",
+  message: `Your order #${order.id} has been placed successfully.`,
+  link: `/orders/${order.id}`,
+});
+if (paymentStatus.toLowerCase() === "paid") {
+  await createUserNotification({
+    userId,
+    type: "order",
+    title: "Payment Successful",
+    message: `Payment for order #${order.id} was completed successfully.`,
+    link: `/orders/${order.id}`,
+  });
+}
 
   for (const item of items) {
     if (item.variantId) {
@@ -160,4 +183,31 @@ export async function getOrder(orderId: number) {
   if (error) throw error;
 
   return data;
+}
+export async function requestOrderReturn(
+  orderId: number,
+  reason: string
+) {
+  const normalizedReason = reason.trim();
+
+  if (normalizedReason.length < 5) {
+    throw new Error(
+      "Please enter a return reason of at least 5 characters."
+    );
+  }
+
+  const { error } = await supabase.rpc(
+    "request_order_return",
+    {
+      target_order_id: orderId,
+      reason_text: normalizedReason,
+    }
+  );
+
+  if (error) {
+    throw new Error(
+      error.message ||
+        "The return request could not be submitted."
+    );
+  }
 }

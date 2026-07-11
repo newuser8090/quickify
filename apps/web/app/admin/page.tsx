@@ -19,10 +19,38 @@ import { getDashboardStats } from "@/services/adminDashboardService";
 const chartColors = ["#16a34a", "#f59e0b", "#3b82f6", "#ef4444", "#8b5cf6"];
 
 export default function AdminDashboardPage() {
-  const { data: stats, isLoading } = useQuery({
-    queryKey: ["admin-dashboard-stats"],
-    queryFn: getDashboardStats,
-  });
+  const {
+  data: stats,
+  isLoading,
+  isError,
+  refetch,
+} = useQuery({
+  queryKey: ["admin-dashboard-stats"],
+  queryFn: getDashboardStats,
+});
+if (isError) {
+  return (
+    <AdminLayout>
+      <div className="rounded-3xl border border-red-100 bg-red-50 p-8 text-center">
+        <h1 className="text-xl font-bold text-red-700">
+          Dashboard data could not be loaded
+        </h1>
+
+        <p className="mt-2 text-sm text-red-600">
+          Please check your connection and try again.
+        </p>
+
+        <button
+          type="button"
+          onClick={() => refetch()}
+          className="mt-5 rounded-xl bg-red-600 px-5 py-2.5 font-semibold text-white transition hover:bg-red-700"
+        >
+          Try Again
+        </button>
+      </div>
+    </AdminLayout>
+  );
+}
 
   return (
     <AdminLayout>
@@ -34,10 +62,31 @@ export default function AdminDashboardPage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard title="Total Revenue" value={isLoading ? "..." : `₹${stats?.totalRevenue ?? 0}`} />
-        <StatCard title="Today Revenue" value={isLoading ? "..." : `₹${stats?.todayRevenue ?? 0}`} />
+        <StatCard
+  title="Total Revenue"
+  value={
+    isLoading
+      ? "..."
+      : formatCurrency(stats?.totalRevenue ?? 0)
+  }
+/>
+        <StatCard
+  title="Today Revenue"
+  value={
+    isLoading
+      ? "..."
+      : formatCurrency(stats?.todayRevenue ?? 0)
+  }
+/>
         <StatCard title="Today Orders" value={isLoading ? "..." : `${stats?.todayOrders ?? 0}`} />
-        <StatCard title="Avg. Order Value" value={isLoading ? "..." : `₹${stats?.averageOrderValue ?? 0}`} />
+        <StatCard
+  title="Avg. Order Value"
+  value={
+    isLoading
+      ? "..."
+      : formatCurrency(stats?.averageOrderValue ?? 0)
+  }
+/>
         <StatCard title="Total Orders" value={isLoading ? "..." : `${stats?.totalOrders ?? 0}`} />
         <StatCard title="Products" value={isLoading ? "..." : `${stats?.totalProducts ?? 0}`} />
         <StatCard title="Customers" value={isLoading ? "..." : `${stats?.totalCustomers ?? 0}`} />
@@ -54,7 +103,18 @@ export default function AdminDashboardPage() {
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={stats?.revenueByDay}>
-                  <XAxis dataKey="date" />
+                  <XAxis
+  dataKey="date"
+  tickFormatter={(value: string) =>
+    new Date(`${value}T00:00:00`).toLocaleDateString(
+      "en-IN",
+      {
+        day: "2-digit",
+        month: "short",
+      }
+    )
+  }
+/>
                   <YAxis />
                   <Tooltip />
                   <Line
@@ -192,8 +252,8 @@ export default function AdminDashboardPage() {
                   </div>
 
                   <p className="font-bold text-green-700">
-                    ₹{product.revenue}
-                  </p>
+  {formatCurrency(product.revenue)}
+</p>
                 </div>
               ))
             )}
@@ -212,8 +272,8 @@ export default function AdminDashboardPage() {
                   <div className="flex justify-between">
                     <span className="font-bold">Order #{order.id}</span>
                     <span className="font-bold text-green-700">
-                      ₹{order.total}
-                    </span>
+  {formatCurrency(Number(order.total ?? 0))}
+</span>
                   </div>
 
                   <div className="mt-2 flex flex-wrap gap-2 text-xs font-bold">
@@ -247,6 +307,14 @@ export default function AdminDashboardPage() {
       </div>
     </AdminLayout>
   );
+}
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(value);
 }
 
 function StatCard({ title, value }: { title: string; value: string }) {

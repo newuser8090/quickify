@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ChevronDown,
@@ -10,40 +10,43 @@ import {
   MapPin,
   Package,
   Settings,
+  ShieldCheck,
   Ticket,
   User,
   UserPlus,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
+import { useAddressStore } from "@/store/addressStore";
 
 export default function UserButton() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   const user = useAuthStore((state) => state.user);
+  const setUser = useAuthStore((state) => state.setUser);
+  const clearAddresses = useAddressStore((state) => state.clearAddresses);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (
-        ref.current &&
-        !ref.current.contains(e.target as Node)
-      ) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
         setOpen(false);
       }
     }
 
     window.addEventListener("click", handleClick);
-
-    return () =>
-      window.removeEventListener("click", handleClick);
+    return () => window.removeEventListener("click", handleClick);
   }, []);
 
   async function handleLogout() {
-    await supabase.auth.signOut();
-    setOpen(false);
-  }
+  await supabase.auth.signOut();
+  setUser(null);
+  clearAddresses();
+  setOpen(false);
+  toast.success("Logged out successfully");
+}
 
   return (
     <div className="relative" ref={ref}>
@@ -52,9 +55,7 @@ export default function UserButton() {
         className="flex items-center gap-2 rounded-xl bg-gray-100 px-5 py-3 font-semibold transition hover:bg-gray-200"
       >
         <User size={18} />
-
         {user ? "My Account" : "Account"}
-
         <ChevronDown
           size={16}
           className={`transition ${open ? "rotate-180" : ""}`}
@@ -62,61 +63,74 @@ export default function UserButton() {
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-3 w-72 overflow-hidden rounded-2xl border bg-white shadow-xl">
+        <div className="absolute right-0 z-50 mt-3 w-72 overflow-hidden rounded-2xl border bg-white shadow-xl">
           <div className="border-b p-5">
-            <p className="text-sm text-gray-500">Welcome</p>
+            <p className="text-sm text-gray-500">
+              {user ? "Signed in as" : "Welcome"}
+            </p>
 
             <h3 className="truncate text-lg font-bold">
-              {user ? user.email : "Guest User"}
+              {user?.email ?? "Guest User"}
             </h3>
           </div>
 
           {user ? (
-            <>
-              <div className="py-2">
-                <MenuItem
-                  href="/wishlist"
-                  icon={<Heart size={18} />}
-                  title="Wishlist"
-                />
+            <div className="py-2">
+              <MenuItem
+                href="/orders"
+                icon={<Package size={18} />}
+                title="My Orders"
+                onClick={() => setOpen(false)}
+              />
 
-                <MenuItem
-                  href="/orders"
-                  icon={<Package size={18} />}
-                  title="My Orders"
-                />
+              <MenuItem
+                href="/wishlist"
+                icon={<Heart size={18} />}
+                title="Wishlist"
+                onClick={() => setOpen(false)}
+              />
 
-                <MenuItem
-                  href="/addresses"
-                  icon={<MapPin size={18} />}
-                  title="Saved Addresses"
-                />
+              <MenuItem
+                href="/coupons"
+                icon={<Ticket size={18} />}
+                title="Coupons"
+                onClick={() => setOpen(false)}
+              />
 
-                <MenuItem
-                  href="/coupons"
-                  icon={<Ticket size={18} />}
-                  title="Coupons"
-                />
+              <MenuItem
+                href="/addresses"
+                icon={<MapPin size={18} />}
+                title="Saved Addresses"
+                onClick={() => setOpen(false)}
+              />
 
-                <MenuItem
-                  href="/settings"
-                  icon={<Settings size={18} />}
-                  title="Settings"
-                />
+              <MenuItem
+                href="/settings"
+                icon={<Settings size={18} />}
+                title="Settings"
+                onClick={() => setOpen(false)}
+              />
 
-                <button
-                  onClick={handleLogout}
-                  className="flex w-full items-center gap-3 px-5 py-3 text-left transition hover:bg-gray-100"
-                >
-                  <LogOut size={18} />
-                  Logout
-                </button>
-              </div>
-            </>
+              <MenuItem
+                href="/security"
+                icon={<ShieldCheck size={18} />}
+                title="Security"
+                onClick={() => setOpen(false)}
+              />
+
+              <button
+                onClick={handleLogout}
+                className="flex w-full items-center gap-3 px-5 py-3 text-left text-red-600 transition hover:bg-red-50"
+              >
+                <LogOut size={18} />
+                Logout
+              </button>
+            </div>
           ) : (
-            <div className="p-4 space-y-3">
+            <div className="space-y-3 p-4">
               <Link
                 href="/login"
+                onClick={() => setOpen(false)}
                 className="flex items-center justify-center gap-2 rounded-xl bg-green-600 py-3 font-semibold text-white hover:bg-green-700"
               >
                 <LogIn size={18} />
@@ -125,6 +139,7 @@ export default function UserButton() {
 
               <Link
                 href="/signup"
+                onClick={() => setOpen(false)}
                 className="flex items-center justify-center gap-2 rounded-xl border py-3 font-semibold hover:bg-gray-50"
               >
                 <UserPlus size={18} />
@@ -146,16 +161,14 @@ type MenuItemProps = {
   href: string;
   icon: React.ReactNode;
   title: string;
+  onClick?: () => void;
 };
 
-function MenuItem({
-  href,
-  icon,
-  title,
-}: MenuItemProps) {
+function MenuItem({ href, icon, title, onClick }: MenuItemProps) {
   return (
     <Link
       href={href}
+      onClick={onClick}
       className="flex items-center gap-3 px-5 py-3 transition hover:bg-gray-100"
     >
       {icon}

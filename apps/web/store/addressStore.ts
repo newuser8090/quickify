@@ -3,27 +3,30 @@ import { Address } from "@/services/addressService";
 
 type AddressStore = {
   addresses: Address[];
-
-  setAddresses: (addresses: Address[]) => void;
-
   selectedAddress: Address | null;
 
-  setSelectedAddress: (address: Address) => void;
+  setAddresses: (addresses: Address[]) => void;
+  setSelectedAddress: (address: Address | null) => void;
+  clearAddresses: () => void;
 };
 
-export const useAddressStore =
-  create<AddressStore>((set) => ({
-    addresses: [],
+export const useAddressStore = create<AddressStore>((set) => ({
+  addresses: [],
+  selectedAddress: null,
 
-    selectedAddress: null,
+  setAddresses: (addresses) =>
+    set({
+      addresses,
+    }),
 
-    setAddresses: (addresses) =>
-      set({
-        addresses,
-      }),
+  setSelectedAddress: (address) =>
+    set({
+      selectedAddress: address,
+    }),
 
-    setSelectedAddress: (address) =>
-      set({
-        selectedAddress: address,
-      }),
-  }));
+  clearAddresses: () =>
+    set({
+      addresses: [],
+      selectedAddress: null,
+    }),
+}));

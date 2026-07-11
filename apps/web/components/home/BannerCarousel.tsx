@@ -1,67 +1,88 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import Image from "next/image";
+import { useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { AnimatePresence, motion } from "motion/react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-const banners = [
-  {
-    id: 1,
-    title: "Fresh Fruits Festival 🍎",
-    subtitle: "Up to 50% OFF on seasonal fruits",
-    button: "Shop Fruits",
-    bg: "from-green-500 via-emerald-500 to-lime-400",
-    image: "🍉🍓🥭",
-  },
-  {
-    id: 2,
-    title: "Daily Essentials 🥛",
-    subtitle: "Milk, Bread & Eggs delivered in minutes",
-    button: "Explore",
-    bg: "from-blue-500 via-cyan-500 to-sky-400",
-    image: "🥛🍞🥚",
-  },
-  {
-    id: 3,
-    title: "Snacks & Beverages 🍕",
-    subtitle: "Weekend cravings? We've got you covered.",
-    button: "Order Now",
-    bg: "from-orange-500 via-red-500 to-pink-500",
-    image: "🍕🥤🍟",
-  },
-  {
-    id: 4,
-    title: "Household Savings 🧺",
-    subtitle: "Cleaning & home essentials at amazing prices",
-    button: "Shop Now",
-    bg: "from-violet-600 via-purple-600 to-fuchsia-500",
-    image: "🧴🧻🧼",
-  },
-];
+import {
+  getActiveBanners,
+  incrementBannerClicks,
+  incrementBannerViews,
+} from "@/services/bannerService";
 
-export default function BannerCarousel() {
+type Props = {
+  onBannerClick: (category: string) => void;
+};
+
+export default function BannerCarousel({ onBannerClick }: Props) {
   const [current, setCurrent] = useState(0);
+  const viewedBannerIds = useRef<Set<number>>(new Set());
+
+  const { data: banners = [], isLoading } = useQuery({
+    queryKey: ["active-banners"],
+    queryFn: getActiveBanners,
+  });
+
+  const banner = banners[current];
 
   useEffect(() => {
+    if (banners.length === 0) return;
+
     const timer = setInterval(() => {
       setCurrent((prev) => (prev + 1) % banners.length);
     }, 5000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [banners.length]);
+
+  useEffect(() => {
+    if (current >= banners.length) {
+      setCurrent(0);
+    }
+  }, [current, banners.length]);
+
+  useEffect(() => {
+    if (!banner?.id) return;
+    if (viewedBannerIds.current.has(banner.id)) return;
+
+    viewedBannerIds.current.add(banner.id);
+
+    incrementBannerViews(banner.id).catch(() => {
+      viewedBannerIds.current.delete(banner.id);
+    });
+  }, [banner?.id]);
+
+  if (isLoading) {
+    return (
+      <section className="mx-auto mt-8 max-w-7xl px-6">
+        <div className="h-80 animate-pulse rounded-3xl bg-gray-200" />
+      </section>
+    );
+  }
+
+  if (banners.length === 0 || !banner) return null;
+
+  const icons = banner.floating_icons ?? [];
 
   function next() {
     setCurrent((prev) => (prev + 1) % banners.length);
   }
 
   function previous() {
-    setCurrent((prev) =>
-      prev === 0 ? banners.length - 1 : prev - 1
-    );
+    setCurrent((prev) => (prev === 0 ? banners.length - 1 : prev - 1));
   }
 
-  // ✅ TypeScript-safe fallback
-  const banner = banners[current] ?? banners[0]!;
+  function handleClick() {
+    if (!banner) return;
+
+    incrementBannerClicks(banner.id).catch(() => {
+      // Analytics should not block navigation
+    });
+
+    onBannerClick(banner.category);
+  }
 
   return (
     <section className="mx-auto mt-8 max-w-7xl px-6">
@@ -73,57 +94,117 @@ export default function BannerCarousel() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -80 }}
             transition={{ duration: 0.45 }}
-            className={`bg-gradient-to-r ${banner.bg} p-10 md:p-14`}
+            className={`relative overflow-hidden ${
+              banner.type === "designed"
+                ? `bg-gradient-to-r ${banner.background_class}`
+                : "bg-gray-100"
+            } p-6 md:p-14`}
           >
-            <div className="flex flex-col items-center justify-between gap-10 md:flex-row">
-              <div className="max-w-xl text-white">
-                <h2 className="text-4xl font-extrabold md:text-5xl">
-                  {banner.title}
-                </h2>
+            {banner.type === "image" && banner.image_url ? (
+              <div className="relative min-h-[220px] overflow-hidden rounded-2xl md:min-h-[260px]">
+                <picture>
+                  {banner.mobile_image_url && (
+                    <source
+                      media="(max-width: 768px)"
+                      srcSet={banner.mobile_image_url}
+                    />
+                  )}
 
-                <p className="mt-5 text-lg opacity-95">
-                  {banner.subtitle}
-                </p>
+                  <Image
+                    src={banner.image_url}
+                    alt={banner.title ?? "Quickify banner"}
+                    fill
+                    className="object-cover"
+                    priority
+                  />
+                </picture>
 
-                <button className="mt-8 rounded-xl bg-white px-6 py-3 font-bold text-black transition hover:scale-105">
-                  {banner.button}
-                </button>
+                <div className="absolute inset-0 bg-black/20" />
+
+                <div className="absolute bottom-5 left-5 z-10 md:bottom-6 md:left-6">
+                  <button
+                    onClick={handleClick}
+                    className={`rounded-xl px-5 py-3 text-sm font-bold transition hover:scale-105 md:px-6 md:text-base ${banner.button_color_class}`}
+                  >
+                    {banner.button_text}
+                  </button>
+                </div>
               </div>
+            ) : (
+              <>
+                <div className="pointer-events-none absolute inset-0 opacity-25">
+                  {icons.slice(0, 5).map((icon, index) => (
+                    <span
+                      key={`${icon}-${index}`}
+                      className="absolute text-4xl md:text-6xl"
+                      style={{
+                        left: `${8 + index * 18}%`,
+                        top: `${12 + (index % 2) * 42}%`,
+                      }}
+                    >
+                      {icon}
+                    </span>
+                  ))}
+                </div>
 
-              <div className="select-none text-7xl md:text-9xl">
-                {banner.image}
-              </div>
-            </div>
+                <div className="relative z-10 flex flex-col items-start justify-between gap-10 md:flex-row md:items-center">
+                  <div className="max-w-xl text-white">
+                    <h2 className="text-3xl font-extrabold md:text-5xl">
+                      {banner.title}
+                    </h2>
+
+                    <p className="mt-4 text-base opacity-95 md:mt-5 md:text-lg">
+                      {banner.subtitle}
+                    </p>
+
+                    <button
+                      onClick={handleClick}
+                      className={`mt-7 rounded-xl px-6 py-3 font-bold transition hover:scale-105 ${banner.button_color_class}`}
+                    >
+                      {banner.button_text}
+                    </button>
+                  </div>
+
+                  <div className="relative hidden h-44 w-44 shrink-0 rounded-full bg-white/20 backdrop-blur md:flex md:items-center md:justify-center">
+                    <span className="text-7xl">
+                      {banner.main_icon ?? icons[0] ?? "🛒"}
+                    </span>
+                  </div>
+                </div>
+              </>
+            )}
           </motion.div>
         </AnimatePresence>
 
-        <button
-          onClick={previous}
-          className="absolute left-5 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-3 shadow-lg transition hover:scale-110"
-        >
-          <ChevronLeft size={24} />
-        </button>
-
-        <button
-          onClick={next}
-          className="absolute right-5 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-3 shadow-lg transition hover:scale-110"
-        >
-          <ChevronRight size={24} />
-        </button>
-
-        <div className="absolute bottom-5 left-1/2 flex -translate-x-1/2 gap-2">
-          {banners.map((_, index) => (
+        {banners.length > 1 && (
+          <>
             <button
-              key={index}
-              onClick={() => setCurrent(index)}
-              className={`h-3 rounded-full transition-all ${
-                current === index
-                  ? "w-10 bg-white"
-                  : "w-3 bg-white/60"
-              }`}
-            />
-          ))}
-        </div>
+              onClick={previous}
+              className="absolute left-4 top-1/2 z-20 -translate-y-1/2 rounded-full bg-white/90 p-3 shadow-lg transition hover:scale-110"
+            >
+              <ChevronLeft size={24} />
+            </button>
+
+            <button
+              onClick={next}
+              className="absolute right-4 top-1/2 z-20 -translate-y-1/2 rounded-full bg-white/90 p-3 shadow-lg transition hover:scale-110"
+            >
+              <ChevronRight size={24} />
+            </button>
+
+            <div className="absolute bottom-5 left-1/2 z-20 flex -translate-x-1/2 gap-2">
+              {banners.map((item, index) => (
+                <button
+                  key={item.id}
+                  onClick={() => setCurrent(index)}
+                  className={`h-3 rounded-full transition-all ${
+                    current === index ? "w-10 bg-white" : "w-3 bg-white/60"
+                  }`}
+                />
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </section>
   );
