@@ -84,7 +84,30 @@ export async function updateProduct(id: number, values: ProductFormValues) {
 }
 
 export async function deleteProduct(id: number) {
-  const { error } = await supabase.from("products").delete().eq("id", id);
+  const { error: imagesError } = await supabase
+    .from("product_images")
+    .delete()
+    .eq("product_id", id);
 
-  if (error) throw error;
+  if (imagesError) {
+    throw imagesError;
+  }
+
+  const { data, error } = await supabase
+    .from("products")
+    .delete()
+    .eq("id", id)
+    .select("id");
+
+  if (error) {
+    throw error;
+  }
+
+  if (!data || data.length === 0) {
+    throw new Error(
+      "Product was not deleted. Check the product delete permission."
+    );
+  }
+
+  return data[0];
 }
