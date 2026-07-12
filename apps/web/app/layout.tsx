@@ -53,8 +53,8 @@ export default function RootLayout({
           </QueryProvider>
 
           <Toaster
-            position="bottom-center"
-            offset={64}
+            position="top-center"
+            offset={44}
             richColors
             closeButton
             duration={2000}
