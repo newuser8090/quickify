@@ -1,7 +1,6 @@
 "use client";
 
 import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
 import AddressList from "@/components/address/AddressList";
 import PageHeader from "@/components/ui/PageHeader";
 
@@ -20,8 +19,6 @@ export default function AddressesPage() {
           <AddressList />
         </div>
       </section>
-
-      <Footer />
     </main>
   );
 }

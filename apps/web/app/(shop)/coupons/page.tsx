@@ -6,7 +6,6 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
 import EmptyState from "@/components/ui/EmptyState";
 import { getCoupons } from "@/services/couponService";
 
@@ -121,8 +120,6 @@ export default function CouponsPage() {
           )}
         </div>
       </section>
-
-      <Footer />
     </main>
   );
 }

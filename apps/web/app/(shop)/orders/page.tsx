@@ -12,7 +12,6 @@ import {
 import { useQuery } from "@tanstack/react-query";
 
 import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
 import EmptyState from "@/components/ui/EmptyState";
 import PageHeader from "@/components/ui/PageHeader";
 import OrderStatusBadge from "@/components/orders/OrderStatusBadge";
@@ -167,8 +166,6 @@ export default function OrdersPage() {
           </div>
         )}
       </section>
-
-      <Footer />
     </main>
   );
 }

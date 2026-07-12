@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import Footer from "@/components/layout/Footer";
 import Navbar from "@/components/layout/Navbar";
 import OrderCard from "@/components/orders/OrderCard";
 import useRealtimeOrders from "@/hooks/useRealtimeOrders";
@@ -279,8 +278,6 @@ export default function OrderDetailsPage({ params }: Props) {
           </div>
         )}
       </section>
-
-      <Footer />
     </main>
   );
 }

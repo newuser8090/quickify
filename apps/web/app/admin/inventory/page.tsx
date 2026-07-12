@@ -1,6 +1,5 @@
 "use client";
-
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { History, Package, RotateCcw, Search } from "lucide-react";
 
@@ -46,9 +45,49 @@ export default function AdminInventoryPage() {
 
   const normalizedSearch = search.trim().toLowerCase();
 
-  const filteredProducts = products.filter((product) =>
+const filteredProducts = useMemo(() => {
+  const matchingProducts = products.filter((product) =>
     product.name.toLowerCase().includes(normalizedSearch)
   );
+
+  return [...matchingProducts].sort((firstProduct, secondProduct) => {
+    const firstStock = firstProduct.stock ?? 0;
+    const secondStock = secondProduct.stock ?? 0;
+
+    const firstThreshold =
+      firstProduct.low_stock_threshold ?? 5;
+
+    const secondThreshold =
+      secondProduct.low_stock_threshold ?? 5;
+
+    const firstIsLowStock =
+      firstStock <= firstThreshold;
+
+    const secondIsLowStock =
+      secondStock <= secondThreshold;
+
+    // Low-stock and out-of-stock products always appear first.
+    if (firstIsLowStock && !secondIsLowStock) {
+      return -1;
+    }
+
+    if (!firstIsLowStock && secondIsLowStock) {
+      return 1;
+    }
+
+    // Within the low-stock group, lowest quantity appears first.
+    if (
+      firstIsLowStock &&
+      secondIsLowStock &&
+      firstStock !== secondStock
+    ) {
+      return firstStock - secondStock;
+    }
+
+    // Keep the remaining products alphabetically ordered.
+    return firstProduct.name.localeCompare(secondProduct.name);
+  });
+}, [products, normalizedSearch]);
 
   const lowStockCount = products.filter((product) => {
     const stock = product.stock ?? 0;

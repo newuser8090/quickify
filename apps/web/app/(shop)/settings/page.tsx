@@ -6,7 +6,6 @@ import { ArrowLeft, Bell, LogOut, Moon, ShieldCheck, User } from "lucide-react";
 import { toast } from "sonner";
 
 import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 
@@ -156,8 +155,6 @@ export default function SettingsPage() {
           </SettingCard>
         </div>
       </section>
-
-      <Footer />
     </main>
   );
 }
