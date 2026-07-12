@@ -19,19 +19,27 @@ export default function ProductGallery({
   const gallery = useMemo<string[]>(() => {
     const extraImages =
       product.images
-        ?.map((image) => image.image_url)
+        ?.map(
+          (image) =>
+            image.image_url
+        )
         .filter(Boolean) ?? [];
 
     return [
       product.image,
       ...extraImages,
     ].filter(Boolean);
-  }, [product.image, product.images]);
+  }, [
+    product.image,
+    product.images,
+  ]);
 
-  const [selectedImage, setSelectedImage] =
-    useState(
-      gallery[0] ?? product.image
-    );
+  const [
+    selectedImage,
+    setSelectedImage,
+  ] = useState(
+    gallery[0] ?? product.image
+  );
 
   const [zooming, setZooming] =
     useState(false);
@@ -44,40 +52,54 @@ export default function ProductGallery({
 
   useEffect(() => {
     setSelectedImage(
-      gallery[0] ?? product.image
+      gallery[0] ??
+        product.image
     );
-  }, [gallery, product.image]);
+  }, [
+    gallery,
+    product.image,
+  ]);
 
   function handleMouseMove(
     event: React.MouseEvent<HTMLDivElement>
   ) {
+    if (
+      window.matchMedia(
+        "(pointer: coarse)"
+      ).matches
+    ) {
+      return;
+    }
+
     const rectangle =
       event.currentTarget.getBoundingClientRect();
 
-    const x =
-      ((event.clientX -
-        rectangle.left) /
-        rectangle.width) *
-      100;
-
-    const y =
-      ((event.clientY -
-        rectangle.top) /
-        rectangle.height) *
-      100;
-
     setPosition({
-      x,
-      y,
+      x:
+        ((event.clientX -
+          rectangle.left) /
+          rectangle.width) *
+        100,
+      y:
+        ((event.clientY -
+          rectangle.top) /
+          rectangle.height) *
+        100,
     });
   }
 
   return (
     <div className="min-w-0">
       <div
-        onMouseEnter={() =>
-          setZooming(true)
-        }
+        onMouseEnter={() => {
+          if (
+            window.matchMedia(
+              "(pointer: fine)"
+            ).matches
+          ) {
+            setZooming(true);
+          }
+        }}
         onMouseLeave={() => {
           setZooming(false);
 
@@ -86,11 +108,13 @@ export default function ProductGallery({
             y: 50,
           });
         }}
-        onMouseMove={handleMouseMove}
-        className="group relative flex h-[520px] cursor-zoom-in items-center justify-center overflow-hidden rounded-3xl border border-gray-100 bg-white p-4 shadow-sm sm:h-[600px] lg:h-[680px]"
+        onMouseMove={
+          handleMouseMove
+        }
+        className="group relative flex h-[340px] items-center justify-center overflow-hidden rounded-2xl border border-gray-100 bg-white p-2 sm:h-[600px] sm:cursor-zoom-in sm:rounded-3xl sm:p-4 lg:h-[680px]"
       >
         {product.discount > 0 && (
-          <span className="absolute left-5 top-5 z-20 rounded-full bg-red-500 px-4 py-2 text-sm font-bold text-white shadow-sm">
+          <span className="absolute left-3 top-3 z-20 rounded-full bg-red-500 px-3 py-1.5 text-xs font-bold text-white shadow-sm sm:left-5 sm:top-5 sm:px-4 sm:py-2 sm:text-sm">
             {product.discount}% OFF
           </span>
         )}
@@ -114,13 +138,13 @@ export default function ProductGallery({
           />
         </div>
 
-        <div className="pointer-events-none absolute bottom-5 left-1/2 z-20 -translate-x-1/2 rounded-full border border-gray-100 bg-white/95 px-4 py-2 text-sm font-semibold text-gray-700 opacity-0 shadow-md transition group-hover:opacity-100">
+        <div className="pointer-events-none absolute bottom-5 left-1/2 z-20 hidden -translate-x-1/2 rounded-full border border-gray-100 bg-white/95 px-4 py-2 text-sm font-semibold text-gray-700 opacity-0 shadow-md transition group-hover:opacity-100 sm:block">
           Hover to zoom
         </div>
       </div>
 
       {gallery.length > 1 && (
-        <div className="mt-5 flex gap-3 overflow-x-auto pb-2">
+        <div className="hide-scrollbar mt-3 flex gap-2 overflow-x-auto pb-1 sm:mt-5 sm:gap-3 sm:pb-2">
           {gallery.map(
             (image, index) => {
               const active =
@@ -135,7 +159,7 @@ export default function ProductGallery({
                       image
                     )
                   }
-                  className={`relative h-24 w-24 shrink-0 overflow-hidden rounded-2xl border-2 bg-white p-1 transition sm:h-28 sm:w-28 ${
+                  className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border-2 bg-white p-0.5 transition sm:h-28 sm:w-28 sm:rounded-2xl sm:p-1 ${
                     active
                       ? "border-green-600 shadow-md"
                       : "border-gray-200 hover:border-green-300"
@@ -159,3 +183,4 @@ export default function ProductGallery({
     </div>
   );
 }
+
