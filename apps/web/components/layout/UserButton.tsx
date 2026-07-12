@@ -17,7 +17,6 @@ import {
   MapPin,
   Package,
   Settings,
-  ShieldCheck,
   Ticket,
   User,
   UserPlus,
@@ -299,17 +298,6 @@ export default function UserButton() {
         href="/settings"
         icon={<Settings size={18} />}
         title="Settings"
-        onClick={() =>
-          setOpen(false)
-        }
-      />
-
-      <MenuItem
-        href="/security"
-        icon={
-          <ShieldCheck size={18} />
-        }
-        title="Security"
         onClick={() =>
           setOpen(false)
         }

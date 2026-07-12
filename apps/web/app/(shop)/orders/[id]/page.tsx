@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import Navbar from "@/components/layout/Navbar";
 import OrderCard from "@/components/orders/OrderCard";
 import useRealtimeOrders from "@/hooks/useRealtimeOrders";
 import {
@@ -44,18 +43,28 @@ type CustomerOrder = {
   refunded_at?: string | null;
 };
 
-export default function OrderDetailsPage({ params }: Props) {
+export default function OrderDetailsPage({
+  params,
+}: Props) {
   const { id } = use(params);
   const orderId = Number(id);
 
   const queryClient = useQueryClient();
-  const user = useAuthStore((state) => state.user);
+
+  const user = useAuthStore(
+    (state) => state.user
+  );
 
   const [showReturnForm, setShowReturnForm] =
     useState(false);
-  const [returnReason, setReturnReason] = useState("");
-  const [submittingReturn, setSubmittingReturn] =
-    useState(false);
+
+  const [returnReason, setReturnReason] =
+    useState("");
+
+  const [
+    submittingReturn,
+    setSubmittingReturn,
+  ] = useState(false);
 
   useRealtimeOrders(user?.id);
 
@@ -76,10 +85,12 @@ export default function OrderDetailsPage({ params }: Props) {
     order as CustomerOrder | undefined;
 
   const normalizedOrderStatus =
-    typedOrder?.status?.toLowerCase() ?? "";
+    typedOrder?.status
+      ?.toLowerCase() ?? "";
 
   const normalizedPaymentStatus =
-    typedOrder?.payment_status?.toLowerCase() ?? "";
+    typedOrder?.payment_status
+      ?.toLowerCase() ?? "";
 
   const returnStatus =
     typedOrder?.return_status ?? "None";
@@ -100,23 +111,37 @@ export default function OrderDetailsPage({ params }: Props) {
       toast.error(
         "Please enter a return reason of at least 5 characters."
       );
+
       return;
     }
 
     try {
       setSubmittingReturn(true);
 
-      await requestOrderReturn(orderId, reason);
+      await requestOrderReturn(
+        orderId,
+        reason
+      );
 
       await Promise.all([
         queryClient.invalidateQueries({
-          queryKey: ["order", orderId],
+          queryKey: [
+            "order",
+            orderId,
+          ],
         }),
+
         queryClient.invalidateQueries({
-          queryKey: ["orders", user?.id],
+          queryKey: [
+            "orders",
+            user?.id,
+          ],
         }),
+
         queryClient.invalidateQueries({
-          queryKey: ["admin-orders"],
+          queryKey: [
+            "admin-orders",
+          ],
         }),
       ]);
 
@@ -144,57 +169,57 @@ export default function OrderDetailsPage({ params }: Props) {
 
   return (
     <main className="min-h-screen bg-gray-50">
-      <Navbar />
-
-      <section className="mx-auto max-w-7xl px-6 py-10">
+      <section className="mx-auto max-w-7xl px-3 py-5 sm:px-6 sm:py-10">
         <Link
           href="/orders"
-          className="mb-6 inline-flex items-center gap-2 font-semibold text-green-700 hover:underline"
+          className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-green-700 hover:underline sm:mb-6 sm:text-base"
         >
           <ArrowLeft size={18} />
           Back to orders
         </Link>
 
         {isLoading ? (
-          <div className="rounded-3xl bg-white p-8 text-center text-gray-500 shadow-sm">
+          <div className="rounded-2xl bg-white p-6 text-center text-sm text-gray-500 shadow-sm sm:rounded-3xl sm:p-8 sm:text-base">
             Loading order details...
           </div>
         ) : isError ? (
-          <div className="rounded-3xl border border-red-100 bg-red-50 p-8 text-center">
-            <h2 className="text-xl font-bold text-red-700">
+          <div className="rounded-2xl border border-red-100 bg-red-50 p-6 text-center sm:rounded-3xl sm:p-8">
+            <h2 className="text-lg font-bold text-red-700 sm:text-xl">
               Order could not be loaded
             </h2>
 
             <button
               type="button"
               onClick={() => refetch()}
-              className="mt-5 rounded-xl bg-red-600 px-5 py-2.5 font-semibold text-white"
+              className="mt-4 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white sm:mt-5 sm:px-5 sm:text-base"
             >
               Try Again
             </button>
           </div>
         ) : !order || !typedOrder ? (
-          <div className="rounded-3xl bg-white p-8 text-center text-gray-500 shadow-sm">
+          <div className="rounded-2xl bg-white p-6 text-center text-sm text-gray-500 shadow-sm sm:rounded-3xl sm:p-8 sm:text-base">
             Order not found.
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             <OrderCard order={order} />
 
-            <section className="rounded-3xl bg-white p-6 shadow-sm">
+            <section className="rounded-2xl bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <div className="flex items-center gap-3">
-                    <RotateCcw className="text-green-600" />
+                    <RotateCcw
+                      className="shrink-0 text-green-600"
+                      size={21}
+                    />
 
-                    <h2 className="text-xl font-bold">
+                    <h2 className="text-lg font-bold sm:text-xl">
                       Return and Refund
                     </h2>
                   </div>
 
-                  <p className="mt-2 text-sm text-gray-500">
-                    Request a return for an eligible
-                    delivered and paid order.
+                  <p className="mt-2 text-sm leading-6 text-gray-500">
+                    Request a return for an eligible delivered and paid order.
                   </p>
                 </div>
 
@@ -202,76 +227,103 @@ export default function OrderDetailsPage({ params }: Props) {
                   <button
                     type="button"
                     onClick={() =>
-                      setShowReturnForm((current) => !current)
+                      setShowReturnForm(
+                        (current) =>
+                          !current
+                      )
                     }
-                    className="rounded-xl bg-green-600 px-5 py-3 font-semibold text-white transition hover:bg-green-700"
+                    className="w-full rounded-xl bg-green-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-green-700 sm:w-auto sm:px-5 sm:py-3 sm:text-base"
                   >
-                    Request Return
+                    {showReturnForm
+                      ? "Close Form"
+                      : "Request Return"}
                   </button>
                 )}
               </div>
 
-              {canRequestReturn && showReturnForm && (
-                <div className="mt-6 rounded-2xl border border-gray-200 bg-gray-50 p-5">
-                  <label className="block">
-                    <span className="font-semibold">
-                      Why are you returning this order?
-                    </span>
+              {canRequestReturn &&
+                showReturnForm && (
+                  <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 p-4 sm:mt-6 sm:p-5">
+                    <label className="block">
+                      <span className="text-sm font-semibold sm:text-base">
+                        Why are you returning this order?
+                      </span>
 
-                    <textarea
-                      value={returnReason}
-                      onChange={(event) =>
-                        setReturnReason(
-                          event.target.value
-                        )
+                      <textarea
+                        value={
+                          returnReason
+                        }
+                        onChange={(
+                          event
+                        ) =>
+                          setReturnReason(
+                            event.target
+                              .value
+                          )
+                        }
+                        rows={4}
+                        maxLength={500}
+                        placeholder="Explain the issue with your order..."
+                        className="mt-3 w-full resize-none rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm outline-none transition focus:border-green-600 sm:px-4 sm:text-base"
+                      />
+                    </label>
+
+                    <div className="mt-2 text-right text-xs text-gray-400">
+                      {
+                        returnReason.length
                       }
-                      rows={4}
-                      maxLength={500}
-                      placeholder="Explain the issue with your order..."
-                      className="mt-3 w-full resize-none rounded-xl border border-gray-200 bg-white px-4 py-3 outline-none transition focus:border-green-600"
-                    />
-                  </label>
+                      /500
+                    </div>
 
-                  <div className="mt-2 text-right text-xs text-gray-400">
-                    {returnReason.length}/500
+                    <div className="mt-4 grid grid-cols-2 gap-3 sm:flex sm:justify-end">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowReturnForm(
+                            false
+                          );
+
+                          setReturnReason(
+                            ""
+                          );
+                        }}
+                        disabled={
+                          submittingReturn
+                        }
+                        className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 sm:px-5 sm:text-base"
+                      >
+                        Cancel
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={
+                          handleReturnRequest
+                        }
+                        disabled={
+                          submittingReturn
+                        }
+                        className="rounded-xl bg-green-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-gray-300 sm:px-5 sm:text-base"
+                      >
+                        {submittingReturn
+                          ? "Submitting..."
+                          : "Submit Request"}
+                      </button>
+                    </div>
                   </div>
+                )}
 
-                  <div className="mt-4 flex flex-wrap justify-end gap-3">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowReturnForm(false);
-                        setReturnReason("");
-                      }}
-                      disabled={submittingReturn}
-                      className="rounded-xl border border-gray-200 px-5 py-2.5 font-semibold transition hover:bg-white"
-                    >
-                      Cancel
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleReturnRequest}
-                      disabled={submittingReturn}
-                      className="rounded-xl bg-green-600 px-5 py-2.5 font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-gray-300"
-                    >
-                      {submittingReturn
-                        ? "Submitting..."
-                        : "Submit Return Request"}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              <ReturnStatusPanel order={typedOrder} />
+              <ReturnStatusPanel
+                order={typedOrder}
+              />
 
               {!canRequestReturn &&
-                returnStatus === "None" &&
-                refundStatus !== "Refunded" && (
-                  <div className="mt-5 rounded-2xl bg-gray-50 p-4 text-sm text-gray-600">
-                    Returns become available after the
-                    order is delivered and its payment is
-                    confirmed.
+                returnStatus ===
+                  "None" &&
+                refundStatus !==
+                  "Refunded" && (
+                  <div className="mt-4 rounded-2xl bg-gray-50 p-4 text-sm leading-6 text-gray-600 sm:mt-5">
+                    Returns become available after the order is delivered and its payment is confirmed.
                   </div>
                 )}
             </section>
@@ -300,14 +352,15 @@ function ReturnStatusPanel({
     return null;
   }
 
-  const refundedAmount =
-    Number(order.refund_amount ?? 0);
+  const refundedAmount = Number(
+    order.refund_amount ?? 0
+  );
 
   return (
-    <div className="mt-6 space-y-4">
+    <div className="mt-4 space-y-3 sm:mt-6 sm:space-y-4">
       {returnStatus === "Requested" && (
         <StatusMessage
-          icon={<Clock3 size={20} />}
+          icon={<Clock3 size={19} />}
           title="Return request under review"
           message={
             order.return_reason
@@ -320,7 +373,11 @@ function ReturnStatusPanel({
 
       {returnStatus === "Approved" && (
         <StatusMessage
-          icon={<PackageCheck size={20} />}
+          icon={
+            <PackageCheck
+              size={19}
+            />
+          }
           title="Return approved"
           message="Your return was approved. The refund is awaiting processing."
           className="bg-blue-50 text-blue-800"
@@ -329,7 +386,9 @@ function ReturnStatusPanel({
 
       {returnStatus === "Rejected" && (
         <StatusMessage
-          icon={<XCircle size={20} />}
+          icon={
+            <XCircle size={19} />
+          }
           title="Return request rejected"
           message={
             order.return_review_note ||
@@ -341,16 +400,17 @@ function ReturnStatusPanel({
 
       {refundStatus === "Pending" && (
         <StatusMessage
-          icon={<Clock3 size={20} />}
+          icon={<Clock3 size={19} />}
           title="Refund pending"
           message="Your approved refund is waiting to be processed."
           className="bg-yellow-50 text-yellow-800"
         />
       )}
 
-      {refundStatus === "Processing" && (
+      {refundStatus ===
+        "Processing" && (
         <StatusMessage
-          icon={<Clock3 size={20} />}
+          icon={<Clock3 size={19} />}
           title="Refund processing"
           message="Your refund has been initiated and is being processed."
           className="bg-blue-50 text-blue-800"
@@ -359,7 +419,11 @@ function ReturnStatusPanel({
 
       {refundStatus === "Refunded" && (
         <StatusMessage
-          icon={<CheckCircle2 size={20} />}
+          icon={
+            <CheckCircle2
+              size={19}
+            />
+          }
           title="Refund completed"
           message={`₹${refundedAmount.toLocaleString(
             "en-IN"
@@ -374,7 +438,9 @@ function ReturnStatusPanel({
 
       {refundStatus === "Failed" && (
         <StatusMessage
-          icon={<XCircle size={20} />}
+          icon={
+            <XCircle size={19} />
+          }
           title="Refund failed"
           message="The refund could not be completed. The admin team will review it."
           className="bg-red-50 text-red-800"
@@ -397,16 +463,18 @@ function StatusMessage({
 }) {
   return (
     <div
-      className={`flex items-start gap-3 rounded-2xl p-4 ${className}`}
+      className={`flex items-start gap-3 rounded-2xl p-3.5 sm:p-4 ${className}`}
     >
       <div className="mt-0.5 shrink-0">
         {icon}
       </div>
 
-      <div>
-        <p className="font-bold">{title}</p>
+      <div className="min-w-0">
+        <p className="text-sm font-bold sm:text-base">
+          {title}
+        </p>
 
-        <p className="mt-1 text-sm opacity-90">
+        <p className="mt-1 break-words text-xs leading-5 opacity-90 sm:text-sm">
           {message}
         </p>
       </div>
