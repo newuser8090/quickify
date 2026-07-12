@@ -16,7 +16,14 @@ export async function getAllOrders() {
     .select(
       `
       *,
-      order_items (*),
+      order_items (
+  *,
+  product:products (
+    id,
+    name,
+    image
+  )
+),
       addresses (*),
       delivery_partners (*)
       `
@@ -667,7 +674,14 @@ export async function getAdminOrder(orderId: number) {
     .select(
       `
       *,
-      order_items (*),
+      order_items (
+  *,
+  product:products (
+    id,
+    name,
+    image
+  )
+),
       addresses (*),
       delivery_partners (*)
       `

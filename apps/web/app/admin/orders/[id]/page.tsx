@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { use, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import Image from "next/image";
 import {
   ArrowLeft,
   Bike,
@@ -33,11 +34,24 @@ type Props = {
 
 type AdminOrderItem = {
   id: number;
+  product_id: number | null;
   name: string;
   unit: string | null;
   price: number;
   quantity: number;
   variant_name: string | null;
+  product?:
+    | {
+        id: number;
+        name: string;
+        image: string | null;
+      }
+    | {
+        id: number;
+        name: string;
+        image: string | null;
+      }[]
+    | null;
 };
 
 type DeliveryPartnerOption = {
@@ -649,7 +663,9 @@ function OrderItemsCard({
 }) {
   return (
     <div className="rounded-2xl bg-gray-50 p-5">
-      <h3 className="font-bold">Items</h3>
+      <h3 className="font-bold">
+        Items
+      </h3>
 
       {items.length === 0 ? (
         <p className="mt-4 text-sm text-gray-500">
@@ -657,46 +673,83 @@ function OrderItemsCard({
         </p>
       ) : (
         <div className="mt-4 space-y-3">
-          {items.map((item) => (
-            <div
-              key={item.id}
-              className="flex justify-between gap-4 border-b border-gray-200 pb-3 last:border-none last:pb-0"
-            >
-              <div>
-                <p className="font-semibold">
-                  {item.name}
-                </p>
+          {items.map((item) => {
+            const product =
+              Array.isArray(item.product)
+                ? item.product[0]
+                : item.product;
 
-                {item.variant_name && (
-                  <p className="mt-1 text-sm font-medium text-green-700">
-                    {item.variant_name}
-                  </p>
-                )}
+            const imageUrl =
+              product?.image ?? null;
 
-                {item.unit && (
-                  <p className="text-sm text-gray-500">
-                    {item.unit}
-                  </p>
-                )}
-
-                <p className="text-sm text-gray-500">
-                  Qty: {item.quantity}
-                </p>
-              </div>
-
-              <div className="text-right">
-                <p className="font-bold">
-                  {formatCurrency(
-                    item.price * item.quantity
+            return (
+              <div
+                key={item.id}
+                className="flex gap-3 border-b border-gray-200 pb-4 last:border-none last:pb-0"
+              >
+                <Link
+                  href={`/product/${
+                    item.product_id ??
+                    product?.id ??
+                    ""
+                  }`}
+                  className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-gray-200 bg-white"
+                >
+                  {imageUrl ? (
+                    <Image
+                      src={imageUrl}
+                      alt={item.name}
+                      fill
+                      sizes="80px"
+                      className="object-contain p-1"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-2xl">
+                      📦
+                    </div>
                   )}
-                </p>
+                </Link>
 
-                <p className="text-xs text-gray-500">
-                  {formatCurrency(item.price)} each
-                </p>
+                <div className="min-w-0 flex-1">
+                  <p className="line-clamp-2 font-semibold">
+                    {item.name}
+                  </p>
+
+                  {item.variant_name && (
+                    <p className="mt-1 text-sm font-medium text-green-700">
+                      {item.variant_name}
+                    </p>
+                  )}
+
+                  {item.unit && (
+                    <p className="text-sm text-gray-500">
+                      {item.unit}
+                    </p>
+                  )}
+
+                  <p className="text-sm text-gray-500">
+                    Qty: {item.quantity}
+                  </p>
+                </div>
+
+                <div className="shrink-0 text-right">
+                  <p className="font-bold">
+                    {formatCurrency(
+                      item.price *
+                        item.quantity
+                    )}
+                  </p>
+
+                  <p className="text-xs text-gray-500">
+                    {formatCurrency(
+                      item.price
+                    )}{" "}
+                    each
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
