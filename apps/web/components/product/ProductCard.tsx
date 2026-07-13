@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import {
   Bell,
@@ -29,6 +29,8 @@ type Props = {
 export default function ProductCard({
   product,
 }: Props) {
+  const router = useRouter();
+
   const items = useCartStore(
     (state) => state.items
   );
@@ -37,49 +39,65 @@ export default function ProductCard({
     (state) => state.addItem
   );
 
-  const increaseQuantity =
-    useCartStore(
-      (state) =>
-        state.increaseQuantity
-    );
+  const increaseQuantity = useCartStore(
+    (state) => state.increaseQuantity
+  );
 
-  const decreaseQuantity =
-    useCartStore(
-      (state) =>
-        state.decreaseQuantity
-    );
+  const decreaseQuantity = useCartStore(
+    (state) => state.decreaseQuantity
+  );
 
-  const toggleWishlist =
-    useWishlistStore(
-      (state) => state.toggle
-    );
+  const toggleWishlist = useWishlistStore(
+    (state) => state.toggle
+  );
 
-  const liked =
-    useWishlistStore((state) =>
-      state.isWishlisted(
-        product.id
-      )
-    );
+  const liked = useWishlistStore(
+    (state) =>
+      state.isWishlisted(product.id)
+  );
 
-  const openQuickView =
-    useQuickViewStore(
-      (state) => state.open
-    );
+  const openQuickView = useQuickViewStore(
+    (state) => state.open
+  );
 
   const user = useAuthStore(
     (state) => state.user
   );
 
-  const cartKey =
-    `${product.id}-base`;
+  const cartKey = `${product.id}-base`;
 
   const cartItem = items.find(
-    (item) =>
-      item.cartKey === cartKey
+    (item) => item.cartKey === cartKey
   );
 
-  const inStock =
-    product.stock > 0;
+  const inStock = product.stock > 0;
+
+  function openProductPage() {
+    router.push(
+      `/product/${product.id}`
+    );
+  }
+
+  function handleCardKeyDown(
+    event: React.KeyboardEvent<HTMLElement>
+  ) {
+    if (
+      event.key === "Enter" ||
+      event.key === " "
+    ) {
+      event.preventDefault();
+      openProductPage();
+    }
+  }
+
+  function handleQuickView(
+    event:
+      | React.MouseEvent
+      | React.KeyboardEvent
+  ) {
+    event.stopPropagation();
+    openQuickView(product);
+  }
 
   async function handleNotifyMe() {
     if (!user) {
@@ -106,8 +124,10 @@ export default function ProductCard({
   }
 
   function handleAddToCart() {
-    const success =
-      addItem(product, null);
+    const success = addItem(
+      product,
+      null
+    );
 
     if (success === false) {
       toast.error(
@@ -124,6 +144,13 @@ export default function ProductCard({
   return (
     <motion.article
       layout
+      role="link"
+      tabIndex={0}
+      aria-label={`Open ${product.name}`}
+      onClick={openProductPage}
+      onKeyDown={
+        handleCardKeyDown
+      }
       initial={{
         opacity: 0,
         y: 14,
@@ -145,22 +172,34 @@ export default function ProductCard({
       transition={{
         duration: 0.26,
       }}
-      className="group flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md sm:rounded-3xl"
+      className="group flex h-full min-w-0 cursor-pointer flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm outline-none transition-shadow hover:shadow-md focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2 sm:rounded-3xl"
     >
       <div
-        onClick={() =>
-          openQuickView(product)
-        }
+        role="button"
+        tabIndex={0}
+        aria-label={`Quick view ${product.name}`}
+        onClick={handleQuickView}
+        onKeyDown={(event) => {
+          if (
+            event.key === "Enter" ||
+            event.key === " "
+          ) {
+            event.preventDefault();
+            handleQuickView(
+              event
+            );
+          }
+        }}
         className="relative flex h-28 cursor-pointer items-center justify-center overflow-hidden bg-white min-[390px]:h-32 sm:h-44 lg:h-48"
       >
         {product.discount > 0 && (
-          <span className="absolute left-1.5 top-1.5 z-10 rounded-full bg-red-500 px-1.5 py-0.5 text-[8px] font-extrabold text-white shadow-sm sm:left-3 sm:top-3 sm:px-2.5 sm:py-1 sm:text-[10px]">
+          <span className="pointer-events-none absolute left-1.5 top-1.5 z-10 rounded-full bg-red-500 px-1.5 py-0.5 text-[8px] font-extrabold text-white shadow-sm sm:left-3 sm:top-3 sm:px-2.5 sm:py-1 sm:text-[10px]">
             {product.discount}% OFF
           </span>
         )}
 
         {product.bestseller && (
-          <span className="absolute bottom-1.5 left-1.5 z-10 rounded-full bg-yellow-400 px-1.5 py-0.5 text-[8px] font-extrabold text-gray-900 shadow-sm sm:bottom-3 sm:left-3 sm:px-2.5 sm:py-1 sm:text-[10px]">
+          <span className="pointer-events-none absolute bottom-1.5 left-1.5 z-10 rounded-full bg-yellow-400 px-1.5 py-0.5 text-[8px] font-extrabold text-gray-900 shadow-sm sm:bottom-3 sm:left-3 sm:px-2.5 sm:py-1 sm:text-[10px]">
             Bestseller
           </span>
         )}
@@ -231,10 +270,7 @@ export default function ProductCard({
 
         <button
           type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            openQuickView(product);
-          }}
+          onClick={handleQuickView}
           className="absolute bottom-3 left-1/2 z-20 hidden -translate-x-1/2 items-center gap-1.5 rounded-full border border-gray-100 bg-white/95 px-3 py-1.5 text-xs font-semibold opacity-0 shadow-md transition group-hover:opacity-100 sm:flex"
         >
           <Eye size={14} />
@@ -272,17 +308,13 @@ export default function ProductCard({
           </span>
         </div>
 
-        <Link href={`/product/${product.id}`}>
-  {/* Removed min-h-8 and sm:min-h-9 */}
-  <h3 className="mt-1 line-clamp-2 text-[12px] font-extrabold leading-[17px] text-gray-900 transition hover:text-green-700 sm:mt-1.5 sm:text-sm sm:leading-5">
-    {product.name}
-  </h3>
-</Link>
+        <h3 className="mt-1 line-clamp-2 text-[12px] font-extrabold leading-[17px] text-gray-900 transition group-hover:text-green-700 sm:mt-1.5 sm:text-sm sm:leading-5">
+          {product.name}
+        </h3>
 
-{/* Added a controlled top margin here */}
-<p className="mt-1 truncate text-[9px] text-gray-500 sm:text-xs">
-  {product.unit}
-</p>
+        <p className="mt-1 truncate text-[9px] text-gray-500 sm:text-xs">
+          {product.unit}
+        </p>
 
         <div className="mt-1 flex min-w-0 items-baseline gap-1 sm:mt-1.5">
           <span className="text-sm font-extrabold text-gray-900 sm:text-lg">
@@ -310,10 +342,17 @@ export default function ProductCard({
 
         <div className="mt-auto pt-2 sm:pt-3">
           {cartItem ? (
-            <div className="flex w-full items-center justify-between rounded-lg border border-green-600 bg-green-50 px-1.5 py-1.5 sm:rounded-xl sm:px-2.5 sm:py-2">
+            <div
+              onClick={(event) =>
+                event.stopPropagation()
+              }
+              className="flex w-full items-center justify-between rounded-lg border border-green-600 bg-green-50 px-1.5 py-1.5 sm:rounded-xl sm:px-2.5 sm:py-2"
+            >
               <button
                 type="button"
-                onClick={() => {
+                onClick={(event) => {
+                  event.stopPropagation();
+
                   decreaseQuantity(
                     cartKey
                   );
@@ -333,7 +372,9 @@ export default function ProductCard({
 
               <button
                 type="button"
-                onClick={() => {
+                onClick={(event) => {
+                  event.stopPropagation();
+
                   const success =
                     increaseQuantity(
                       cartKey
@@ -360,9 +401,10 @@ export default function ProductCard({
               whileTap={{
                 scale: 0.96,
               }}
-              onClick={
-                handleAddToCart
-              }
+              onClick={(event) => {
+                event.stopPropagation();
+                handleAddToCart();
+              }}
               className="flex w-full items-center justify-center gap-1 rounded-lg bg-green-600 py-2 text-[10px] font-extrabold text-white transition hover:bg-green-700 sm:rounded-xl sm:py-2.5 sm:text-sm"
             >
               <ShoppingCart
@@ -378,9 +420,10 @@ export default function ProductCard({
               whileTap={{
                 scale: 0.96,
               }}
-              onClick={
-                handleNotifyMe
-              }
+              onClick={(event) => {
+                event.stopPropagation();
+                handleNotifyMe();
+              }}
               className="flex w-full items-center justify-center gap-1 rounded-lg border border-green-600 bg-white py-2 text-[9px] font-extrabold text-green-700 transition hover:bg-green-50 sm:rounded-xl sm:py-2.5 sm:text-xs"
             >
               <Bell

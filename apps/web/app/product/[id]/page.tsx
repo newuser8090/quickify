@@ -657,7 +657,6 @@ export default function ProductPage({
       </div>
 
       <ProductQuickView />
-      <CartDrawer />
     </main>
   );
 }

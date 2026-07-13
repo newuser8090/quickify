@@ -1,123 +1,166 @@
 @import "tailwindcss";
 
-
-
 @custom-variant dark (&:where(.dark, .dark *));
 
-
-
 :root {
-
   --background: #ffffff;
-
   --foreground: #171717;
-
   --primary: #16a34a;
-
 }
-
-
 
 html {
-
   scroll-behavior: smooth;
-
   overflow-x: hidden;
-
   -webkit-text-size-adjust: 100%;
-
 }
-
-
 
 body {
-
   min-width: 320px;
-
   overflow-x: hidden;
-
   background: var(--background);
-
   color: var(--foreground);
-
   font-family: Arial, Helvetica, sans-serif;
-
   -webkit-font-smoothing: antialiased;
-
   text-rendering: optimizeLegibility;
-
 }
-
-
 
 * {
-
   box-sizing: border-box;
-
 }
 
-
-
 button,
-
 a,
-
 input,
-
 select,
-
 textarea {
-
   -webkit-tap-highlight-color: transparent;
-
 }
-
-
 
 button,
-
 a {
-
   touch-action: manipulation;
-
 }
-
-
 
 img {
-
   max-width: 100%;
-
 }
-
-
 
 .hide-scrollbar {
-
   scrollbar-width: none;
-
   -ms-overflow-style: none;
-
 }
-
-
 
 .hide-scrollbar::-webkit-scrollbar {
-
   display: none;
-
 }
 
-
-
 @supports (padding: env(safe-area-inset-bottom)) {
-
   body {
-
     padding-left: env(safe-area-inset-left);
-
     padding-right: env(safe-area-inset-right);
+  }
+}
 
+/* ===========================
+   Quickify Compact Toast
+=========================== */
+
+[data-sonner-toaster][data-x-position="center"] {
+  left: 50% !important;
+  right: auto !important;
+  width: auto !important;
+  transform: translateX(-50%) !important;
+}
+
+[data-sonner-toast] {
+  position: relative !important;
+
+  min-height: 34px !important;
+  width: max-content !important;
+  max-width: min(240px, calc(100vw - 32px)) !important;
+
+  margin-inline: auto !important;
+  padding: 7px 12px !important;
+
+  border: 1px solid #dcfce7 !important;
+  border-radius: 999px !important;
+
+  background: rgba(255, 255, 255, 0.94) !important;
+
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+
+  box-shadow:
+    0 10px 28px rgba(15, 23, 42, 0.12) !important;
+
+  color: #16a34a !important;
+  font-size: 12px !important;
+  line-height: 1.2 !important;
+
+  transform-origin: center top !important;
+}
+
+/* Remove Sonner's sideways transition */
+[data-sonner-toast][data-mounted="true"] {
+  animation: quickify-toast-drop 0.28s
+    cubic-bezier(0.22, 1, 0.36, 1) both !important;
+
+  transition:
+    opacity 0.18s ease,
+    top 0.3s ease !important;
+}
+
+[data-sonner-toast][data-removed="true"] {
+  animation: quickify-toast-hide 0.18s
+    ease both !important;
+}
+
+[data-sonner-toast] [data-content] {
+  gap: 5px !important;
+}
+
+[data-sonner-toast] [data-title] {
+  color: #16a34a !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  line-height: 1.2 !important;
+}
+
+[data-sonner-toast] [data-description],
+[data-sonner-toast] [data-close-button] {
+  display: none !important;
+}
+
+[data-sonner-toast] svg {
+  width: 13px !important;
+  height: 13px !important;
+  color: #16a34a !important;
+}
+
+@keyframes quickify-toast-drop {
+  from {
+    opacity: 0;
+    translate: 0 -18px;
+    scale: 0.94;
   }
 
+  to {
+    opacity: 1;
+    translate: 0 0;
+    scale: 1;
+  }
+}
+
+@keyframes quickify-toast-hide {
+  from {
+    opacity: 1;
+    translate: 0 0;
+    scale: 1;
+  }
+
+  to {
+    opacity: 0;
+    translate: 0 -8px;
+    scale: 0.96;
+  }
 }

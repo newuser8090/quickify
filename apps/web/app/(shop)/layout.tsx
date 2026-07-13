@@ -1,7 +1,5 @@
 import type { ReactNode } from "react";
 
-import StickyCartBar from "@/components/cart/StickyCartBar";
-
 type Props = {
   children: ReactNode;
 };
@@ -9,9 +7,5 @@ type Props = {
 export default function ShopLayout({
   children,
 }: Props) {
-  return (
-    <>
-      {children}
-    </>
-  );
+  return children;
 }

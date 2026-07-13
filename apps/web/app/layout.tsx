@@ -10,7 +10,7 @@ import CartProvider from "@/components/providers/CartProvider";
 import WishlistProvider from "@/components/providers/WishlistProvider";
 import AddressProvider from "@/components/providers/AddressProvider";
 import StickyCartBar from "@/components/cart/StickyCartBar";
-
+import CartDrawer from "@/components/cart/CartDrawer";
 import "./globals.css";
 
 const geistSans = localFont({
@@ -45,6 +45,7 @@ export default function RootLayout({
                     <AddressProvider>
                       {children}
                       <StickyCartBar />
+                      <CartDrawer />
                     </AddressProvider>
                   </WishlistProvider>
                 </CartProvider>
@@ -53,12 +54,21 @@ export default function RootLayout({
           </QueryProvider>
 
           <Toaster
-            position="top-center"
-            offset={44}
-            richColors
-            closeButton
-            duration={2000}
-          />
+  position="top-center"
+  expand={false}
+  visibleToasts={1}
+  closeButton={false}
+  richColors={false}
+  offset={{
+    top: 85,
+  }}
+  mobileOffset={{
+    top: 85,
+  }}
+  toastOptions={{
+    duration: 1800,
+  }}
+/>
         </AuthProvider>
       </body>
     </html>
