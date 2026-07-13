@@ -401,7 +401,6 @@ export default function Home() {
 
       <CartDrawer />
 
-      <StickyCartBar />
 
       <Footer />
 
