@@ -1,4 +1,8 @@
-import type { ReactNode } from "react";
+import type {
+  ReactNode,
+} from "react";
+
+import QuickMateProvider from "@/components/quickmate/QuickMateProvider";
 
 type Props = {
   children: ReactNode;
@@ -7,5 +11,10 @@ type Props = {
 export default function ShopLayout({
   children,
 }: Props) {
-  return children;
+  return (
+    <>
+      {children}
+      <QuickMateProvider />
+    </>
+  );
 }

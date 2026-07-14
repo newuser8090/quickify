@@ -12,6 +12,7 @@ import {
   Sparkles,
 } from "lucide-react";
 
+import QuickMateProvider from "@/components/quickmate/QuickMateProvider";
 import Navbar from "@/components/layout/Navbar";
 import FloatingSearchHeader from "@/components/layout/FloatingSearchHeader";
 import Hero from "@/components/home/Hero";
@@ -423,6 +424,7 @@ export default function Home() {
 
       <ProductQuickView />
       <Footer />
+      <QuickMateProvider />
     </main>
   );
 }

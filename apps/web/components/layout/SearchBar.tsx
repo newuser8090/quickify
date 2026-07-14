@@ -1,15 +1,20 @@
 "use client";
 
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import {
+  useRouter,
+} from "next/navigation";
 import {
   useEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
-import { useQuery } from "@tanstack/react-query";
 import {
+  useQuery,
+} from "@tanstack/react-query";
+import {
+  ArrowRight,
   Clock,
   Flame,
   Search,
@@ -20,11 +25,17 @@ import {
   motion,
 } from "motion/react";
 
-import { getAllProducts } from "@/services/productService";
-import { useFilterStore } from "@/store/filterStore";
+import {
+  getAllProducts,
+} from "@/services/productService";
+import {
+  useFilterStore,
+} from "@/store/filterStore";
 
 type Props = {
-  variant?: "default" | "floating";
+  variant?:
+    | "default"
+    | "floating";
 };
 
 const trendingSearches = [
@@ -39,20 +50,54 @@ export default function SearchBar({
   variant = "default",
 }: Props) {
   const router = useRouter();
+
   const boxRef =
-    useRef<HTMLDivElement>(null);
+    useRef<HTMLDivElement>(
+      null
+    );
+
+  const inputRef =
+    useRef<HTMLInputElement>(
+      null
+    );
 
   const [open, setOpen] =
     useState(false);
 
+  /*
+   * -1 means no product suggestion is
+   * selected with the keyboard.
+   *
+   * Therefore, pressing Enter normally
+   * applies the typed search instead of
+   * unexpectedly opening the first item.
+   */
   const [
     activeIndex,
     setActiveIndex,
-  ] = useState(0);
+  ] = useState(-1);
 
-  const search = useFilterStore(
-    (state) => state.search
-  );
+  /*
+   * This local draft is the important fix.
+   *
+   * Typing updates this state only, so the
+   * homepage does not filter and reflow after
+   * every individual character.
+   */
+  const [
+    draftSearch,
+    setDraftSearch,
+  ] = useState("");
+
+  /*
+   * `search` remains the applied homepage
+   * filter. It changes only after submission.
+   */
+  const search =
+    useFilterStore(
+      (state) =>
+        state.search
+    );
 
   const setSearch =
     useFilterStore(
@@ -85,14 +130,20 @@ export default function SearchBar({
     data: products = [],
   } = useQuery({
     queryKey: ["products"],
-    queryFn: getAllProducts,
+    queryFn:
+      getAllProducts,
   });
 
+  /*
+   * Suggestions use the local draft, not the
+   * applied homepage filter.
+   */
   const suggestions =
     useMemo(() => {
-      const query = search
-        .trim()
-        .toLowerCase();
+      const query =
+        draftSearch
+          .trim()
+          .toLowerCase();
 
       if (!query) {
         return [];
@@ -103,20 +154,40 @@ export default function SearchBar({
           (product) =>
             product.name
               .toLowerCase()
-              .includes(query) ||
+              .includes(
+                query
+              ) ||
             product.category
               .toLowerCase()
-              .includes(query) ||
+              .includes(
+                query
+              ) ||
             product.unit
               .toLowerCase()
-              .includes(query)
+              .includes(
+                query
+              )
         )
         .slice(0, 7);
-    }, [products, search]);
+    }, [
+      products,
+      draftSearch,
+    ]);
+
+  /*
+   * Keep both the navbar and floating search
+   * synchronized whenever a search is applied
+   * or reset elsewhere.
+   */
+  useEffect(() => {
+    setDraftSearch(
+      search
+    );
+  }, [search]);
 
   useEffect(() => {
-    setActiveIndex(0);
-  }, [search]);
+    setActiveIndex(-1);
+  }, [draftSearch]);
 
   useEffect(() => {
     function handleClickOutside(
@@ -129,6 +200,7 @@ export default function SearchBar({
         )
       ) {
         setOpen(false);
+        setActiveIndex(-1);
       }
     }
 
@@ -153,8 +225,17 @@ export default function SearchBar({
       productName
     );
 
+    /*
+     * Clear the applied filter before moving
+     * to the product page so returning home
+     * does not unexpectedly retain the query.
+     */
     setSearch("");
+    setDraftSearch("");
     setOpen(false);
+    setActiveIndex(-1);
+
+    inputRef.current?.blur();
 
     router.push(
       `/product/${productId}`
@@ -162,16 +243,58 @@ export default function SearchBar({
   }
 
   function applySearch(
-    value: string
+    rawValue: string
   ) {
+    const value =
+      rawValue.trim();
+
+    if (!value) {
+      return;
+    }
+
+    setDraftSearch(
+      value
+    );
+
     setSearch(value);
     addRecentSearch(value);
+
     setOpen(false);
+    setActiveIndex(-1);
+
+    /*
+     * Search is now intentionally submitted,
+     * so it is safe to close the mobile
+     * keyboard before the result layout changes.
+     */
+    inputRef.current?.blur();
+
+    window.requestAnimationFrame(
+      () => {
+        document
+          .getElementById(
+            "products-section"
+          )
+          ?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+      }
+    );
   }
 
   function clearSearch() {
+    setDraftSearch("");
     setSearch("");
+
+    setActiveIndex(-1);
     setOpen(true);
+
+    window.requestAnimationFrame(
+      () => {
+        inputRef.current?.focus();
+      }
+    );
   }
 
   function handleKeyDown(
@@ -185,25 +308,7 @@ export default function SearchBar({
       event.key === "Escape"
     ) {
       setOpen(false);
-      return;
-    }
-
-    if (
-      !search.trim() ||
-      suggestions.length === 0
-    ) {
-      if (
-        event.key ===
-          "Enter" &&
-        search.trim()
-      ) {
-        event.preventDefault();
-
-        applySearch(
-          search.trim()
-        );
-      }
-
+      setActiveIndex(-1);
       return;
     }
 
@@ -211,14 +316,27 @@ export default function SearchBar({
       event.key ===
       "ArrowDown"
     ) {
+      if (
+        suggestions.length ===
+        0
+      ) {
+        return;
+      }
+
       event.preventDefault();
 
       setActiveIndex(
-        (current) =>
-          current >=
-          suggestions.length - 1
-            ? 0
-            : current + 1
+        (current) => {
+          if (
+            current >=
+            suggestions.length -
+              1
+          ) {
+            return 0;
+          }
+
+          return current + 1;
+        }
       );
 
       return;
@@ -228,14 +346,26 @@ export default function SearchBar({
       event.key ===
       "ArrowUp"
     ) {
+      if (
+        suggestions.length ===
+        0
+      ) {
+        return;
+      }
+
       event.preventDefault();
 
       setActiveIndex(
-        (current) =>
-          current <= 0
-            ? suggestions.length -
+        (current) => {
+          if (current <= 0) {
+            return (
+              suggestions.length -
               1
-            : current - 1
+            );
+          }
+
+          return current - 1;
+        }
       );
 
       return;
@@ -246,21 +376,32 @@ export default function SearchBar({
     ) {
       event.preventDefault();
 
-      const selected =
-        suggestions[
-          activeIndex
-        ];
+      /*
+       * A suggestion opens only when the user
+       * intentionally selected it using the
+       * arrow keys.
+       */
+      if (
+        activeIndex >= 0
+      ) {
+        const selected =
+          suggestions[
+            activeIndex
+          ];
 
-      if (selected) {
-        openProduct(
-          selected.id,
-          selected.name
-        );
-      } else {
-        applySearch(
-          search.trim()
-        );
+        if (selected) {
+          openProduct(
+            selected.id,
+            selected.name
+          );
+
+          return;
+        }
       }
+
+      applySearch(
+        draftSearch
+      );
     }
   }
 
@@ -281,22 +422,26 @@ export default function SearchBar({
         "\\$&"
       );
 
-    const parts = text.split(
-      new RegExp(
-        `(${escapedQuery})`,
-        "gi"
-      )
-    );
+    const parts =
+      text.split(
+        new RegExp(
+          `(${escapedQuery})`,
+          "gi"
+        )
+      );
 
     return (
       <>
         {parts.map(
-          (part, index) =>
+          (
+            part,
+            index
+          ) =>
             part.toLowerCase() ===
             cleanQuery.toLowerCase() ? (
               <mark
                 key={`${part}-${index}`}
-                className="rounded bg-yellow-200 px-1"
+                className="rounded bg-yellow-200 px-0.5 text-inherit"
               >
                 {part}
               </mark>
@@ -311,6 +456,11 @@ export default function SearchBar({
       </>
     );
   }
+
+  const hasDraft =
+    Boolean(
+      draftSearch.trim()
+    );
 
   return (
     <div
@@ -327,32 +477,44 @@ export default function SearchBar({
       />
 
       <input
-        value={search}
+        ref={inputRef}
+        value={draftSearch}
         onFocus={() =>
           setOpen(true)
         }
         onKeyDown={
           handleKeyDown
         }
-        onChange={(event) => {
-          setSearch(
+        onChange={(
+          event
+        ) => {
+          /*
+           * Do not call the global setSearch
+           * function here.
+           */
+          setDraftSearch(
             event.target.value
           );
 
           setOpen(true);
         }}
         placeholder="Search for milk, atta, fruits..."
+        enterKeyHint="search"
+        autoComplete="off"
+        spellCheck={false}
         className={`w-full outline-none transition ${
           floating
-  ? "h-11 rounded-full border border-white/20 bg-white/15 py-2 pl-10 pr-9 text-xs text-gray-900 placeholder:text-gray-600 backdrop-blur-[28px] shadow-[0_8px_32px_rgba(31,38,135,0.18)] ring-1 ring-white/15 transition-all focus:bg-white/20 focus:border-white/30 sm:h-12 sm:pl-11 sm:text-sm"
+            ? "h-11 rounded-full border border-white/20 bg-white/15 py-2 pl-10 pr-9 text-xs text-gray-900 shadow-[0_8px_32px_rgba(31,38,135,0.18)] ring-1 ring-white/15 backdrop-blur-[28px] placeholder:text-gray-600 focus:border-white/30 focus:bg-white/20 sm:h-12 sm:pl-11 sm:text-sm"
             : "rounded-2xl border border-gray-300 bg-gray-50 py-3 pl-11 pr-10 text-sm focus:border-green-600 focus:bg-white sm:pl-12 sm:text-base"
         }`}
       />
 
-      {search && (
+      {hasDraft && (
         <button
           type="button"
-          onClick={clearSearch}
+          onClick={
+            clearSearch
+          }
           aria-label="Clear search"
           className={`absolute top-1/2 z-10 -translate-y-1/2 rounded-full p-1 transition ${
             floating
@@ -385,19 +547,36 @@ export default function SearchBar({
             transition={{
               duration: 0.16,
             }}
-            className={`absolute left-0 right-0 top-[calc(100%+8px)] z-[90] max-h-[70vh] overflow-y-auto border bg-white shadow-2xl ${
+            className={`absolute left-0 right-0 top-[calc(100%+8px)] z-[90] max-h-[min(70vh,520px)] overflow-y-auto overscroll-contain border bg-white shadow-2xl ${
               floating
                 ? "rounded-3xl border-white/60"
                 : "rounded-2xl border-gray-200 sm:rounded-3xl"
             }`}
           >
-            {search.trim() ? (
+            {hasDraft ? (
               suggestions.length >
               0 ? (
                 <div className="py-2">
-                  <div className="px-4 py-2 text-xs font-bold text-gray-500 sm:px-5 sm:py-3 sm:text-sm">
-                    Products matching
-                    “{search}”
+                  <div className="flex items-center justify-between gap-3 px-4 py-2 sm:px-5 sm:py-3">
+                    <p className="min-w-0 truncate text-xs font-bold text-gray-500 sm:text-sm">
+                      Suggestions for
+                      “{draftSearch}”
+                    </p>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        applySearch(
+                          draftSearch
+                        )
+                      }
+                      className="inline-flex shrink-0 items-center gap-1 text-[11px] font-extrabold text-green-700 sm:text-xs"
+                    >
+                      View all
+                      <ArrowRight
+                        size={13}
+                      />
+                    </button>
                   </div>
 
                   {suggestions.map(
@@ -415,6 +594,15 @@ export default function SearchBar({
                             index
                           )
                         }
+                        /*
+                         * Prevent mousedown from blurring
+                         * the input before click completes.
+                         */
+                        onMouseDown={(
+                          event
+                        ) =>
+                          event.preventDefault()
+                        }
                         onClick={() =>
                           openProduct(
                             product.id,
@@ -428,7 +616,7 @@ export default function SearchBar({
                             : "hover:bg-green-50"
                         }`}
                       >
-                        <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border bg-white sm:h-14 sm:w-14">
+                        <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-gray-100 bg-white sm:h-14 sm:w-14">
                           {product.image ? (
                             <Image
                               src={
@@ -449,35 +637,35 @@ export default function SearchBar({
                         </div>
 
                         <div className="min-w-0 flex-1">
-                          <h3 className="line-clamp-1 text-sm font-semibold sm:text-base">
+                          <h3 className="line-clamp-1 text-sm font-semibold text-gray-900 sm:text-base">
                             {highlight(
                               product.name,
-                              search
+                              draftSearch
                             )}
                           </h3>
 
-                          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-gray-500 sm:gap-2 sm:text-sm">
-                            <span className="line-clamp-1">
+                          <div className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-gray-500 sm:gap-2 sm:text-sm">
+                            <span className="truncate">
                               {
                                 product.category
                               }
                             </span>
 
-                            <span>
+                            <span className="shrink-0">
                               •
                             </span>
 
-                            <span>
+                            <span className="shrink-0">
                               {
                                 product.unit
                               }
                             </span>
 
-                            <span>
+                            <span className="shrink-0">
                               •
                             </span>
 
-                            <span className="font-semibold text-green-700">
+                            <span className="shrink-0 font-semibold text-green-700">
                               ₹
                               {
                                 product.price
@@ -485,25 +673,65 @@ export default function SearchBar({
                             </span>
                           </div>
                         </div>
+
+                        <ChevronIcon />
                       </button>
                     )
                   )}
+
+                  <div className="border-t border-gray-100 px-3 py-2 sm:px-5">
+                    <button
+                      type="button"
+                      onMouseDown={(
+                        event
+                      ) =>
+                        event.preventDefault()
+                      }
+                      onClick={() =>
+                        applySearch(
+                          draftSearch
+                        )
+                      }
+                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-green-50 px-4 py-2.5 text-xs font-extrabold text-green-700 transition hover:bg-green-100 sm:text-sm"
+                    >
+                      <Search
+                        size={15}
+                      />
+                      Search for “
+                      {draftSearch.trim()}
+                      ”
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="p-7 text-center sm:p-8">
-                  <div className="text-4xl sm:text-5xl">
+                  <div className="text-4xl">
                     🔍
                   </div>
 
                   <h3 className="mt-3 font-bold">
-                    No products
-                    found
+                    No direct suggestions
                   </h3>
 
                   <p className="mt-1 text-sm text-gray-500">
-                    Try another
-                    keyword.
+                    Submit the search to
+                    view matching products.
                   </p>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      applySearch(
+                        draftSearch
+                      )
+                    }
+                    className="mt-4 inline-flex items-center gap-2 rounded-xl bg-green-600 px-4 py-2.5 text-xs font-extrabold text-white sm:text-sm"
+                  >
+                    <Search
+                      size={15}
+                    />
+                    Search anyway
+                  </button>
                 </div>
               )
             ) : (
@@ -516,8 +744,7 @@ export default function SearchBar({
                         <Clock
                           size={17}
                         />
-                        Recent
-                        Searches
+                        Recent Searches
                       </div>
 
                       <button
@@ -525,7 +752,7 @@ export default function SearchBar({
                         onClick={
                           clearRecentSearches
                         }
-                        className="text-sm font-semibold text-green-700"
+                        className="text-xs font-semibold text-green-700 sm:text-sm"
                       >
                         Clear
                       </button>
@@ -586,5 +813,14 @@ export default function SearchBar({
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+function ChevronIcon() {
+  return (
+    <ArrowRight
+      size={16}
+      className="shrink-0 text-gray-300"
+    />
   );
 }
