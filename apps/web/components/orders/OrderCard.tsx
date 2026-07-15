@@ -1,5 +1,8 @@
 "use client";
 
+import {
+  motion,
+} from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -12,6 +15,7 @@ import {
   Pencil,
   RotateCcw,
   Star,
+  XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -555,7 +559,7 @@ export default function OrderCard({
           : ""
       }`}
     >
-      <section className="bg-gradient-to-br from-green-600 via-emerald-600 to-green-700 p-4 text-white sm:p-6">
+      <section className="bg-gradient-to-br from-green-600 via-emerald-600 to-green-700 p-3.5 text-white sm:p-6">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-green-100">
@@ -602,76 +606,294 @@ export default function OrderCard({
         </div>
       </section>
 
-      <div className="space-y-4 p-3 sm:space-y-6 sm:p-6">
-        <section className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                Progress
-              </p>
+      <div className="space-y-3 p-2.5 sm:space-y-6 sm:p-6">
+        <section className="rounded-2xl border border-gray-100 bg-gray-50 p-3 sm:p-4">
+  <div className="flex items-center justify-between gap-3">
+    <div>
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 sm:text-xs">
+        Progress
+      </p>
 
-              <h3 className="mt-1 font-bold text-gray-900">
-                Order Tracking
-              </h3>
-            </div>
+      <h3 className="mt-1 text-sm font-bold text-gray-900 sm:text-base">
+        Order Tracking
+      </h3>
+    </div>
 
-            {!isCancelled && (
-              <span className="rounded-full bg-green-100 px-3 py-1 text-[11px] font-bold text-green-700">
-                {Math.max(0, currentIndex + 1)}/{steps.length}
-              </span>
-            )}
-          </div>
+    {!isCancelled && (
+      <span className="rounded-full bg-green-100 px-2.5 py-1 text-[10px] font-bold text-green-700 sm:px-3 sm:text-[11px]">
+        {Math.max(0, currentIndex + 1)}/{steps.length}
+      </span>
+    )}
+  </div>
 
-          {isCancelled ? (
-            <div className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">
-              This order has been cancelled.
-            </div>
-          ) : (
-            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5">
-              {steps.map((step, index) => {
-                const completed = index <= currentIndex;
-                const current = index === currentIndex;
+  {isCancelled ? (
+    <div className="mt-4 flex items-center gap-3 rounded-2xl border border-red-100 bg-red-50 p-3.5 text-red-700">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-100">
+        <XCircle size={18} />
+      </span>
 
-                return (
-                  <div
-                    key={step}
-                    className={`rounded-xl border p-3 transition ${
-                      current
-                        ? "border-green-300 bg-green-50"
-                        : completed
-                          ? "border-green-100 bg-white"
-                          : "border-gray-100 bg-white"
+      <div>
+        <p className="text-sm font-bold">
+          Order cancelled
+        </p>
+
+        <p className="mt-0.5 text-[11px] text-red-600 sm:text-sm">
+          This order will not be delivered.
+        </p>
+      </div>
+    </div>
+  ) : (
+    <>
+      {/* Mobile vertical timeline */}
+      <div className="mt-4 space-y-0 sm:hidden">
+        {steps.map((step, index) => {
+          const completed = index < currentIndex;
+          const active = index === currentIndex;
+          const reached = index <= currentIndex;
+
+          const descriptions: Record<string, string> = {
+            Placed: "Your order has been received.",
+            Processing: "We are preparing your items.",
+            Packed: "Your order is packed and ready.",
+            "Out for Delivery": "Your rider is on the way.",
+            Delivered: "Order delivered successfully.",
+          };
+
+          return (
+            <motion.div
+              key={step}
+              initial={{
+                opacity: 0,
+                y: 8,
+              }}
+              animate={{
+                opacity: 1,
+                y: 0,
+              }}
+              transition={{
+                delay: index * 0.06,
+                duration: 0.22,
+              }}
+              className="flex gap-3"
+            >
+              <div className="flex shrink-0 flex-col items-center">
+                <motion.div
+                  initial={{
+                    scale: 0.85,
+                  }}
+                  animate={{
+                    scale: 1,
+                  }}
+                  transition={{
+                    delay: index * 0.06,
+                    duration: 0.22,
+                  }}
+                  className={`relative z-10 flex h-8 w-8 items-center justify-center rounded-full border-2 ${
+                    active
+                      ? "border-green-600 bg-green-600 text-white shadow-[0_7px_20px_rgba(22,163,74,0.28)]"
+                      : completed
+                        ? "border-green-500 bg-green-50 text-green-600"
+                        : "border-gray-200 bg-white text-gray-300"
+                  }`}
+                >
+                  {completed ? (
+                    <CheckCircle2 size={15} />
+                  ) : reached ? (
+                    <PackageCheck size={14} />
+                  ) : (
+                    <Circle size={13} />
+                  )}
+
+                  {active && (
+                    <motion.span
+                      animate={{
+                        scale: [1, 1.65, 1.65],
+                        opacity: [0.35, 0, 0],
+                      }}
+                      transition={{
+                        duration: 1.6,
+                        repeat: Infinity,
+                        ease: "easeOut",
+                      }}
+                      className="absolute inset-0 -z-10 rounded-full bg-green-400"
+                    />
+                  )}
+                </motion.div>
+
+                {index < steps.length - 1 && (
+                  <div className="relative my-1 h-9 w-0.5 overflow-hidden rounded-full bg-gray-200">
+                    <motion.div
+                      initial={{
+                        height: 0,
+                      }}
+                      animate={{
+                        height:
+                          index < currentIndex
+                            ? "100%"
+                            : "0%",
+                      }}
+                      transition={{
+                        duration: 0.4,
+                        delay: index * 0.05,
+                      }}
+                      className="absolute inset-x-0 top-0 rounded-full bg-green-500"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="min-w-0 flex-1 pb-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p
+                    className={`text-sm font-black ${
+                      active
+                        ? "text-green-700"
+                        : reached
+                          ? "text-gray-900"
+                          : "text-gray-400"
                     }`}
                   >
-                    <div className="flex items-center gap-2">
-                      {completed ? (
-                        <CheckCircle2
-                          size={18}
-                          className="shrink-0 text-green-600"
-                        />
-                      ) : (
-                        <Circle
-                          size={18}
-                          className="shrink-0 text-gray-300"
-                        />
-                      )}
+                    {step}
+                  </p>
 
-                      <span
-                        className={`text-xs font-semibold leading-4 ${
-                          completed
-                            ? "text-green-700"
-                            : "text-gray-400"
-                        }`}
-                      >
-                        {step}
-                      </span>
-                    </div>
+                  {active && (
+                    <span className="rounded-full bg-green-100 px-2 py-0.5 text-[8px] font-black uppercase tracking-wide text-green-700">
+                      Current
+                    </span>
+                  )}
+
+                  {completed && (
+                    <span className="text-[9px] font-bold text-green-600">
+                      Completed
+                    </span>
+                  )}
+                </div>
+
+                <p
+                  className={`mt-0.5 text-[11px] leading-4 ${
+                    reached
+                      ? "text-gray-500"
+                      : "text-gray-400"
+                  }`}
+                >
+                  {descriptions[step]}
+                </p>
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
+
+      {/* Tablet and desktop horizontal timeline */}
+      <div className="mt-5 hidden sm:block">
+        <div className="flex items-start justify-between px-1">
+          {steps.map((step, index) => {
+            const completed = index < currentIndex;
+            const active = index === currentIndex;
+            const reached = index <= currentIndex;
+
+            return (
+              <div
+                key={step}
+                className="relative flex flex-1 flex-col items-center"
+              >
+                {index < steps.length - 1 && (
+                  <div className="absolute left-1/2 top-5 h-0.5 w-full">
+                    <div className="h-full w-full rounded-full bg-gray-200" />
+
+                    <motion.div
+                      initial={{
+                        width: 0,
+                      }}
+                      animate={{
+                        width:
+                          index < currentIndex
+                            ? "100%"
+                            : "0%",
+                      }}
+                      transition={{
+                        duration: 0.45,
+                        ease: [0.22, 1, 0.36, 1],
+                      }}
+                      className="absolute inset-y-0 left-0 rounded-full bg-green-500"
+                    />
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </section>
+                )}
+
+                <motion.div
+                  initial={{
+                    scale: 0.85,
+                    opacity: 0,
+                    y: 6,
+                  }}
+                  animate={{
+                    scale: 1,
+                    opacity: 1,
+                    y: 0,
+                  }}
+                  transition={{
+                    delay: index * 0.06,
+                    duration: 0.24,
+                  }}
+                  className={`relative z-10 flex h-10 w-10 items-center justify-center rounded-full border-2 ${
+                    active
+                      ? "border-green-600 bg-green-600 text-white shadow-[0_7px_20px_rgba(22,163,74,0.32)]"
+                      : completed
+                        ? "border-green-500 bg-green-50 text-green-600"
+                        : "border-gray-200 bg-white text-gray-300"
+                  }`}
+                >
+                  {completed ? (
+                    <CheckCircle2 size={18} />
+                  ) : reached ? (
+                    <PackageCheck size={18} />
+                  ) : (
+                    <Circle size={16} />
+                  )}
+
+                  {active && (
+                    <motion.span
+                      animate={{
+                        scale: [1, 1.65, 1.65],
+                        opacity: [0.35, 0, 0],
+                      }}
+                      transition={{
+                        duration: 1.6,
+                        repeat: Infinity,
+                        ease: "easeOut",
+                      }}
+                      className="absolute inset-0 -z-10 rounded-full bg-green-400"
+                    />
+                  )}
+                </motion.div>
+
+                <div className="mt-2 min-w-0 px-1 text-center">
+                  <p
+                    className={`text-xs font-black leading-4 ${
+                      active
+                        ? "text-green-700"
+                        : reached
+                          ? "text-gray-900"
+                          : "text-gray-400"
+                    }`}
+                  >
+                    {step}
+                  </p>
+
+                  {active && (
+                    <span className="mt-1 inline-flex rounded-full bg-green-100 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-green-700">
+                      Current
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </>
+  )}
+</section>
 
         <LiveDeliveryTracking
           status={order.status}
@@ -702,11 +924,11 @@ export default function OrderCard({
             </span>
           </div>
 
-          <div className="space-y-2.5">
+          <div className="space-y-2">
             {order.order_items.map((item) => (
               <div
                 key={item.id}
-                className="rounded-2xl border border-gray-100 bg-white p-3 shadow-sm"
+                className="rounded-xl border border-gray-100 bg-white p-2 sm:rounded-2xl sm:p-3 shadow-sm"
               >
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0 flex-1">
@@ -717,7 +939,7 @@ export default function OrderCard({
                     <button
                       type="button"
                       onClick={() => handleOpenReview(item)}
-                      className="flex w-full items-center justify-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-2.5 text-sm font-semibold text-green-700 transition hover:bg-green-100 sm:w-auto"
+                      className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs font-semibold text-green-700 transition hover:bg-green-100 sm:w-auto sm:rounded-xl sm:px-4 sm:py-2.5 sm:text-sm"
                     >
                       <Pencil size={15} />
 

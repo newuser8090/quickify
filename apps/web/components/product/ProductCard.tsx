@@ -1,11 +1,18 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { motion } from "motion/react";
 import {
   Bell,
+  BellRing,
   Eye,
   Heart,
+  LoaderCircle,
   Minus,
   Plus,
   ShoppingCart,
@@ -20,7 +27,10 @@ import { useAuthStore } from "@/store/authStore";
 import { useCartStore } from "@/store/cartStore";
 import { useQuickViewStore } from "@/store/quickViewStore";
 import { useWishlistStore } from "@/store/wishlistStore";
-import { subscribeStockNotification } from "@/services/stockNotificationService";
+import {
+  isSubscribedToStockNotification,
+  subscribeStockNotification,
+} from "@/services/stockNotificationService";
 
 type Props = {
   product: Product;
@@ -30,6 +40,10 @@ export default function ProductCard({
   product,
 }: Props) {
   const router = useRouter();
+  const queryClient = useQueryClient();
+
+  const [subscribing, setSubscribing] =
+    useState(false);
 
   const items = useCartStore(
     (state) => state.items
@@ -72,6 +86,28 @@ export default function ProductCard({
 
   const inStock = product.stock > 0;
 
+  const subscriptionQueryKey = [
+    "stock-notification-subscription",
+    user?.id,
+    product.id,
+  ];
+
+  const {
+    data: subscribed = false,
+    isLoading: checkingSubscription,
+  } = useQuery({
+    queryKey: subscriptionQueryKey,
+    queryFn: () =>
+      isSubscribedToStockNotification(
+        user!.id,
+        product.id
+      ),
+    enabled:
+      Boolean(user?.id) &&
+      !inStock,
+    staleTime: 60_000,
+  });
+
   function openProductPage() {
     router.push(
       `/product/${product.id}`
@@ -100,6 +136,13 @@ export default function ProductCard({
   }
 
   async function handleNotifyMe() {
+    if (
+      subscribed ||
+      subscribing
+    ) {
+      return;
+    }
+
     if (!user) {
       toast.error(
         "Please login to get stock alerts"
@@ -108,18 +151,32 @@ export default function ProductCard({
     }
 
     try {
+      setSubscribing(true);
+
       await subscribeStockNotification(
         user.id,
         product.id
       );
 
+      queryClient.setQueryData(
+        subscriptionQueryKey,
+        true
+      );
+
       toast.success(
         "We'll notify you when this product is back in stock"
       );
-    } catch {
+    } catch (error) {
+      console.error(
+        "Stock notification subscription failed:",
+        error
+      );
+
       toast.error(
         "Failed to subscribe for stock alert"
       );
+    } finally {
+      setSubscribing(false);
     }
   }
 
@@ -140,6 +197,11 @@ export default function ProductCard({
       `${product.name} added to cart`
     );
   }
+
+  const notifyButtonDisabled =
+    subscribed ||
+    subscribing ||
+    checkingSubscription;
 
   return (
     <motion.article
@@ -185,9 +247,7 @@ export default function ProductCard({
             event.key === " "
           ) {
             event.preventDefault();
-            handleQuickView(
-              event
-            );
+            handleQuickView(event);
           }
         }}
         className="relative flex h-28 cursor-pointer items-center justify-center overflow-hidden bg-white min-[390px]:h-32 sm:h-44 lg:h-48"
@@ -209,9 +269,7 @@ export default function ProductCard({
           onClick={(event) => {
             event.stopPropagation();
 
-            toggleWishlist(
-              product
-            );
+            toggleWishlist(product);
 
             toast(
               liked
@@ -417,21 +475,52 @@ export default function ProductCard({
           ) : (
             <motion.button
               type="button"
-              whileTap={{
-                scale: 0.96,
-              }}
+              whileTap={
+                notifyButtonDisabled
+                  ? undefined
+                  : {
+                      scale: 0.96,
+                    }
+              }
+              disabled={
+                notifyButtonDisabled
+              }
               onClick={(event) => {
                 event.stopPropagation();
-                handleNotifyMe();
+                void handleNotifyMe();
               }}
-              className="flex w-full items-center justify-center gap-1 rounded-lg border border-green-600 bg-white py-2 text-[9px] font-extrabold text-green-700 transition hover:bg-green-50 sm:rounded-xl sm:py-2.5 sm:text-xs"
+              className={`flex w-full items-center justify-center gap-1 rounded-lg border py-2 text-[9px] font-extrabold transition sm:rounded-xl sm:py-2.5 sm:text-xs ${
+                subscribed
+                  ? "cursor-default border-green-200 bg-green-50 text-green-700"
+                  : "border-green-600 bg-white text-green-700 hover:bg-green-50 disabled:cursor-wait disabled:border-gray-200 disabled:bg-gray-50 disabled:text-gray-400"
+              }`}
             >
-              <Bell
-                size={12}
-                className="sm:h-4 sm:w-4"
-              />
-
-              Notify
+              {subscribing ||
+              checkingSubscription ? (
+                <>
+                  <LoaderCircle
+                    size={12}
+                    className="animate-spin sm:h-4 sm:w-4"
+                  />
+                  Checking
+                </>
+              ) : subscribed ? (
+                <>
+                  <BellRing
+                    size={12}
+                    className="sm:h-4 sm:w-4"
+                  />
+                  Subscribed
+                </>
+              ) : (
+                <>
+                  <Bell
+                    size={12}
+                    className="sm:h-4 sm:w-4"
+                  />
+                  Notify
+                </>
+              )}
             </motion.button>
           )}
         </div>

@@ -672,7 +672,7 @@ function OrderItemsCard({
           No order items found.
         </p>
       ) : (
-        <div className="mt-4 space-y-3">
+        <div className="mt-3 space-y-2 sm:space-y-3">
           {items.map((item) => {
             const product =
               Array.isArray(item.product)
@@ -685,7 +685,7 @@ function OrderItemsCard({
             return (
               <div
                 key={item.id}
-                className="flex gap-3 border-b border-gray-200 pb-4 last:border-none last:pb-0"
+                className="flex gap-2 sm:gap-3 border-b border-gray-200 pb-3 sm:pb-4 last:border-none last:pb-0"
               >
                 <Link
                   href={`/product/${
@@ -693,14 +693,14 @@ function OrderItemsCard({
                     product?.id ??
                     ""
                   }`}
-                  className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-gray-200 bg-white"
+                  className="relative h-14 w-14 sm:h-20 sm:w-20 shrink-0 overflow-hidden rounded-xl border border-gray-200 bg-white"
                 >
                   {imageUrl ? (
                     <Image
                       src={imageUrl}
                       alt={item.name}
                       fill
-                      sizes="80px"
+                      sizes="(max-width:640px) 56px, 80px"
                       className="object-contain p-1"
                     />
                   ) : (
@@ -711,36 +711,36 @@ function OrderItemsCard({
                 </Link>
 
                 <div className="min-w-0 flex-1">
-                  <p className="line-clamp-2 font-semibold">
+                  <p className="line-clamp-2 text-sm sm:text-base font-semibold">
                     {item.name}
                   </p>
 
                   {item.variant_name && (
-                    <p className="mt-1 text-sm font-medium text-green-700">
+                    <p className="mt-1 text-[11px] sm:text-sm font-medium text-green-700">
                       {item.variant_name}
                     </p>
                   )}
 
                   {item.unit && (
-                    <p className="text-sm text-gray-500">
+                    <p className="text-[11px] sm:text-sm text-gray-500">
                       {item.unit}
                     </p>
                   )}
 
-                  <p className="text-sm text-gray-500">
+                  <p className="text-[11px] sm:text-sm text-gray-500">
                     Qty: {item.quantity}
                   </p>
                 </div>
 
                 <div className="shrink-0 text-right">
-                  <p className="font-bold">
+                  <p className="text-sm sm:text-base font-bold">
                     {formatCurrency(
                       item.price *
                         item.quantity
                     )}
                   </p>
 
-                  <p className="text-xs text-gray-500">
+                  <p className="text-[10px] sm:text-xs text-gray-500">
                     {formatCurrency(
                       item.price
                     )}{" "}
@@ -844,7 +844,7 @@ function DeliveryPartnerCard({
           </p>
         </div>
       ) : (
-        <div className="mt-4 space-y-3">
+        <div className="mt-3 space-y-2 sm:space-y-3">
           <select
             value={selectedPartner}
             onChange={(event) =>
